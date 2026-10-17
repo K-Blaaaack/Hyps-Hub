@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(HypsHub
-    VERSION 0.1.2
+    VERSION 0.1.3
     DESCRIPTION "Hyps Hub - a native Linux desktop client for the Hyps CLI"
     HOMEPAGE_URL "https://github.com/MoYingJi/Hyps"
     LANGUAGES CXX
@@ -138,6 +138,8 @@ set(HYPS_HUB_QML
     qml/components/ToggleSwitch.qml
     qml/components/ToggleRow.qml
     qml/components/ConfigField.qml
+    qml/components/CodeEditor.qml
+    qml/components/RawEditorDialog.qml
     qml/components/PathField.qml
     qml/components/FilePicker.qml
     qml/components/LogView.qml

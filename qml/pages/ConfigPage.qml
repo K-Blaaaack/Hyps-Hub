@@ -14,8 +14,6 @@ Item {
     property var runnerIssues: []
     property string runnerName: ""
     property var runnerCfg: runnerName.length > 0 ? Configs.runnerConfig(runnerName) : null
-    property bool rawCommon: false
-    property bool rawRunner: false
 
     readonly property var tabDefs: [
         { label: "通用配置", english: "COMMON" },
@@ -37,9 +35,10 @@ Item {
             page.host.showToast(result.backup ? "已保存配置，备份：" + result.backup : "没有修改或已保存");
             page.refreshCommon();
             Games.refresh();
-        } else {
-            page.host.showToast("保存失败：" + result.error);
+            return true;
         }
+        page.host.showToast("保存失败：" + result.error);
+        return false;
     }
 
     function trySaveCommon() {
@@ -74,14 +73,13 @@ Item {
 
     function selectRunner(name) {
         page.runnerName = name;
-        page.rawRunner = false;
         page.refreshRunner();
     }
 
     function saveRunner() {
         if (!page.runnerCfg || !Configs.runnerDirectoryIsolated) {
             page.host.showToast("运行器目录来自 Hyps 组件，已禁止写入。请先初始化配置。");
-            return;
+            return false;
         }
         const result = page.runnerCfg.save();
         if (result.ok) {
@@ -89,9 +87,10 @@ Item {
                                               : "没有修改或已保存");
             Configs.reloadRunners();
             page.refreshRunner();
-        } else {
-            page.host.showToast("保存失败：" + result.error);
+            return true;
         }
+        page.host.showToast("保存失败：" + result.error);
+        return false;
     }
 
     Component.onCompleted: {
@@ -285,15 +284,15 @@ Item {
                             }
 
                             ArkButton {
-                                text: page.rawCommon ? "关闭原始编辑器" : "原始编辑器"
-                                implicitHeight: 38
+                                text: "原始编辑器"
+                                implicitHeight: 40
                                 ghost: true
-                                onClicked: {
-                                    page.rawCommon = !page.rawCommon;
-                                    if (page.rawCommon) {
-                                        commonRawArea.text = Configs.common.text;
-                                    }
-                                }
+                                enabled: Configs.common.exists
+                                onClicked: commonRawDialog.openWith(
+                                    "通用配置原始编辑器",
+                                    Configs.commonConfigPath,
+                                    Configs.common.text,
+                                    false)
                             }
 
                             MicroLabel {
@@ -358,72 +357,6 @@ Item {
                         ValidationList {
                             Layout.fillWidth: true
                             issues: page.commonIssues
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            visible: page.rawCommon
-                            spacing: 8
-                            Layout.topMargin: 6
-
-                            SectionHeader {
-                                Layout.fillWidth: true
-                                index: "09"
-                                english: "RAW"
-                                title: "原始配置文本"
-                            }
-
-                            TextArea {
-                                id: commonRawArea
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 220
-                                color: Theme.colors.paper2
-                                font.family: App.monoFontFamily
-                                font.pixelSize: 12
-                                selectByMouse: true
-                                wrapMode: TextArea.WrapAnywhere
-                                leftPadding: 10
-                                topPadding: 8
-                                background: Rectangle {
-                                    color: Theme.colors.codeBg
-                                    border.width: 1
-                                    border.color: commonRawArea.activeFocus ? Theme.colors.signal
-                                                                            : Theme.colors.line
-                                }
-                            }
-
-                            RowLayout {
-                                spacing: 10
-
-                                ArkButton {
-                                    text: "应用文本"
-                                    implicitHeight: 36
-                                    onClicked: {
-                                        const result = Configs.common.applyRawText(commonRawArea.text);
-                                        page.refreshCommon();
-                                        page.host.showToast(result.ok
-                                                            ? "已应用到内存，保存后写入磁盘"
-                                                            : "无法应用：" + result.error);
-                                    }
-                                }
-
-                                ArkButton {
-                                    text: "应用并保存"
-                                    implicitHeight: 36
-                                    primary: true
-                                    onClicked: {
-                                        const applied = Configs.common.applyRawText(commonRawArea.text);
-                                        if (!applied.ok) {
-                                            page.host.showToast("无法应用：" + applied.error);
-                                            return;
-                                        }
-                                        page.saveCommon();
-                                        commonRawArea.text = Configs.common.text;
-                                    }
-                                }
-
-                                Item { Layout.fillWidth: true }
-                            }
                         }
 
                         Item { Layout.preferredHeight: 8 }
@@ -688,30 +621,18 @@ Item {
                                     issues: page.runnerIssues
                                 }
 
-                                TextArea {
+                                CodeEditor {
                                     id: runnerRawArea
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
                                     readOnly: !Configs.runnerDirectoryIsolated
-                                    color: Theme.colors.paper2
-                                    font.family: App.monoFontFamily
-                                    font.pixelSize: 12
-                                    selectByMouse: true
-                                    wrapMode: TextArea.WrapAnywhere
-                                    leftPadding: 10
-                                    topPadding: 8
                                     text: page.runnerCfg ? page.runnerCfg.text : ""
-                                    background: Rectangle {
-                                        color: Theme.colors.codeBg
-                                        border.width: 1
-                                        border.color: runnerRawArea.activeFocus ? Theme.colors.signal
-                                                                                : Theme.colors.line
-                                    }
+                                    placeholderText: "运行器配置"
 
                                     Connections {
                                         target: page.runnerCfg
                                         function onChanged() {
-                                            if (!runnerRawArea.activeFocus) {
+                                            if (!runnerRawArea.editing) {
                                                 runnerRawArea.text = page.runnerCfg.text;
                                             }
                                         }
@@ -844,6 +765,59 @@ Item {
                         Item { Layout.preferredHeight: 8 }
                     }
                 }
+            }
+        }
+    }
+
+    RawEditorDialog {
+        id: commonRawDialog
+
+        onApplyRequested: function (text) {
+            const result = Configs.common.applyRawText(text);
+            page.refreshCommon();
+            page.host.showToast(result.ok
+                                ? "已应用到内存，保存后写入磁盘"
+                                : "无法应用：" + result.error);
+        }
+
+        onSaveRequested: function (text) {
+            const applied = Configs.common.applyRawText(text);
+            if (!applied.ok) {
+                page.host.showToast("无法应用：" + applied.error);
+                return;
+            }
+            if (page.saveCommon()) {
+                commonRawDialog.close();
+            }
+        }
+    }
+
+    RawEditorDialog {
+        id: runnerRawDialog
+        readOnly: !Configs.runnerDirectoryIsolated
+
+        onApplyRequested: function (text) {
+            if (!page.runnerCfg) {
+                return;
+            }
+            const result = page.runnerCfg.applyRawText(text);
+            page.refreshRunner();
+            page.host.showToast(result.ok
+                                ? "已应用到内存，保存后写入磁盘"
+                                : "无法应用：" + result.error);
+        }
+
+        onSaveRequested: function (text) {
+            if (!page.runnerCfg) {
+                return;
+            }
+            const applied = page.runnerCfg.applyRawText(text);
+            if (!applied.ok) {
+                page.host.showToast("无法应用：" + applied.error);
+                return;
+            }
+            if (page.saveRunner()) {
+                runnerRawDialog.close();
             }
         }
     }

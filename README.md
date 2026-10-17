@@ -53,6 +53,15 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - 底部显示启动命令与隔离环境；只有配置完整且已保存时「启动游戏」才可用。
 - 启动通过上游 `scripts/<Game>.sh` 执行，实时输出进入「任务」页。
 
+#### 大窗口原始编辑器
+
+![原始编辑器](docs/screenshots/editor.png)
+
+- 点击「原始编辑器」会弹出独立大窗口，不再占用页面底部的小输入框。
+- 编辑器支持横向与纵向滚动条（常显）、鼠标选择、`Ctrl+S` 保存。
+- 「应用文本」只写入内存等待保存；「应用并保存」会校验、备份并落盘。
+- 同一编辑器也用于通用配置与运行器配置。
+
 ### 04 添加游戏配置
 
 ![添加游戏配置](docs/screenshots/add-game.png)
@@ -146,8 +155,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.1.2/ -o hyps-hub-0.1.2.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.2.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.1.3/ -o hyps-hub-0.1.3.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.3.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 

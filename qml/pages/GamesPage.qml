@@ -15,7 +15,6 @@ Item {
     property var gameCfg: selectedSlug.length > 0 ? Configs.gameConfig(selectedSlug) : null
     property var issues: []
     property bool advanced: false
-    property bool rawMode: false
 
     function syncGameInfo() {
         gameInfo = selectedSlug.length > 0 ? Games.gameBySlug(selectedSlug) : ({});
@@ -30,14 +29,13 @@ Item {
             return;
         }
         page.selectedSlug = slug;
-        page.rawMode = false;
         page.syncGameInfo();
         page.refreshIssues();
     }
 
     function doSave() {
         if (!page.gameCfg) {
-            return;
+            return false;
         }
         const result = page.gameCfg.save();
         if (result.ok) {
@@ -46,9 +44,10 @@ Item {
                                 : "已保存");
             Games.refresh();
             page.refreshIssues();
-        } else {
-            page.host.showToast("保存失败：" + result.error);
+            return true;
         }
+        page.host.showToast("保存失败：" + result.error);
+        return false;
     }
 
     function trySave() {
@@ -509,98 +508,25 @@ Item {
                                     spacing: 10
 
                                     ArkButton {
-                                        text: page.rawMode ? "关闭原始编辑器" : "原始编辑器"
-                                        implicitHeight: 36
+                                        text: "原始编辑器"
+                                        implicitHeight: 40
                                         ghost: true
-                                        onClicked: {
-                                            page.rawMode = !page.rawMode;
-                                            if (page.rawMode && page.gameCfg) {
-                                                rawArea.text = page.gameCfg.text;
-                                            }
-                                        }
+                                        enabled: page.gameCfg && page.gameCfg.exists
+                                        onClicked: rawEditorDialog.openWith(
+                                            "游戏配置原始编辑器",
+                                            page.gameCfg.filePath,
+                                            page.gameCfg.text,
+                                            false)
                                     }
 
                                     MicroLabel {
-                                        label: "RAW EDITOR / 保留注释与顺序"
+                                        label: "大窗口编辑 / 保留注释与顺序 / 双向滚动"
                                         color: Theme.colors.disabled
                                         microSize: 8
                                         tracking: 1.0
                                     }
 
                                     Item { Layout.fillWidth: true }
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    visible: page.rawMode
-                                    spacing: 8
-
-                                    TextArea {
-                                        id: rawArea
-                                        Layout.fillWidth: true
-                                        Layout.preferredHeight: 180
-                                        color: Theme.colors.paper2
-                                        font.family: App.monoFontFamily
-                                        font.pixelSize: 12
-                                        selectByMouse: true
-                                        wrapMode: TextArea.WrapAnywhere
-                                        leftPadding: 10
-                                        topPadding: 8
-                                        background: Rectangle {
-                                            color: Theme.colors.codeBg
-                                            border.width: 1
-                                            border.color: rawArea.activeFocus ? Theme.colors.signal
-                                                                              : Theme.colors.line
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        spacing: 10
-
-                                        ArkButton {
-                                            text: "应用文本"
-                                            implicitHeight: 36
-                                            onClicked: {
-                                                if (!page.gameCfg) {
-                                                    return;
-                                                }
-                                                const result = page.gameCfg.applyRawText(rawArea.text);
-                                                if (result.ok) {
-                                                    page.refreshIssues();
-                                                    page.host.showToast("已应用到内存，保存后写入磁盘");
-                                                } else {
-                                                    page.host.showToast("无法应用：" + result.error);
-                                                }
-                                            }
-                                        }
-
-                                        ArkButton {
-                                            text: "应用并保存"
-                                            implicitHeight: 36
-                                            primary: true
-                                            onClicked: {
-                                                if (!page.gameCfg) {
-                                                    return;
-                                                }
-                                                const applied = page.gameCfg.applyRawText(rawArea.text);
-                                                if (!applied.ok) {
-                                                    page.host.showToast("无法应用：" + applied.error);
-                                                    return;
-                                                }
-                                                page.doSave();
-                                                rawArea.text = page.gameCfg.text;
-                                            }
-                                        }
-
-                                        Item { Layout.fillWidth: true }
-
-                                        MicroLabel {
-                                            label: "保存前会创建 .bak.<时间戳> 备份"
-                                            color: Theme.colors.disabled
-                                            microSize: 8
-                                            tracking: 0.8
-                                        }
-                                    }
                                 }
 
                                 Item { Layout.preferredHeight: 8 }
@@ -651,6 +577,37 @@ Item {
         message: "这些警告不会阻止保存，但可能导致启动失败。建议先修正 game.exe 与 runner.name。仍要保存吗？"
         confirmText: "仍然保存"
         onAccepted: page.doSave()
+    }
+
+    RawEditorDialog {
+        id: rawEditorDialog
+
+        onApplyRequested: function (text) {
+            if (!page.gameCfg) {
+                return;
+            }
+            const result = page.gameCfg.applyRawText(text);
+            if (result.ok) {
+                page.refreshIssues();
+                page.host.showToast("已应用到内存，保存后写入磁盘");
+            } else {
+                page.host.showToast("无法应用：" + result.error);
+            }
+        }
+
+        onSaveRequested: function (text) {
+            if (!page.gameCfg) {
+                return;
+            }
+            const applied = page.gameCfg.applyRawText(text);
+            if (!applied.ok) {
+                page.host.showToast("无法应用：" + applied.error);
+                return;
+            }
+            if (page.doSave()) {
+                rawEditorDialog.close();
+            }
+        }
     }
 
     // 添加游戏配置

@@ -64,6 +64,7 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 - `docs/screenshots/config.png`：通用配置分组、开关与保存流程。
 - `docs/screenshots/diagnostics.png`：前置检查、环境报表、更新与诊断命令。
 - `docs/screenshots/settings.png`：主题、通知、组件与隐私设置。
+- `docs/screenshots/editor.png`：大窗口原始配置编辑器（双向滚动、Ctrl+S、应用/保存）。
 
 QML 加载无警告（`tst_smoke`、截图运行均无 QML 警告）。设计规范中的 0 圆角、45° 切角、单强边、
 微标签、噪点/网格/警戒线纹理、44px 主按钮均已落地；未使用任何鹰角专有美术资产。
@@ -87,16 +88,16 @@ share/licenses/hyps-hub/GPL-3.0-only.txt
 ```
 
 `desktop-file-validate` 仅提示 Categories 建议（已改为单一 `Game;`）。
-安装后的二进制以 `--version` 输出 `hyps-hub 0.1.2`。
+安装后的二进制以 `--version` 输出 `hyps-hub 0.1.3`。
 
 ### Arch PKGBUILD
 
 ```bash
-git archive --prefix=hyps-hub-0.1.2/ -o hyps-hub-0.1.2.tar.gz HEAD
+git archive --prefix=hyps-hub-0.1.3/ -o hyps-hub-0.1.3.tar.gz HEAD
 makepkg -f
 ```
 
-实际结果：`hyps-hub 0.1.2-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
+实际结果：`hyps-hub 0.1.3-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
 包内容包含可执行文件、desktop、图标、文档、许可证；无安装脚本，不写系统级用户配置。
 从包中解出的二进制在独立 XDG 目录下可正常执行 `--version`，`ldd` 无缺失库。
 

@@ -68,7 +68,7 @@ Item {
         if (!textInput.activeFocus) {
             textInput.text = root.value();
         }
-        if (!arrayArea.activeFocus) {
+        if (!arrayArea.editing) {
             arrayArea.text = root.arrayText();
         }
     }
@@ -273,24 +273,12 @@ Item {
             spacing: 6
             visible: root.type === "array"
 
-            TextArea {
+            CodeEditor {
                 id: arrayArea
                 Layout.fillWidth: true
-                Layout.preferredHeight: 84
-                color: Theme.colors.paper2
-                font.family: App.monoFontFamily
-                font.pixelSize: 12
-                leftPadding: 10
-                topPadding: 8
-                selectByMouse: true
-                wrapMode: TextArea.WrapAnywhere
+                Layout.preferredHeight: 110
+                editorHeight: 110
                 placeholderText: "每行一个数组元素"
-                placeholderTextColor: Theme.colors.disabled
-                background: Rectangle {
-                    color: Theme.colors.ink
-                    border.width: 1
-                    border.color: arrayArea.activeFocus ? Theme.colors.signal : Theme.colors.line
-                }
             }
 
             RowLayout {
