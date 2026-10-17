@@ -205,83 +205,6 @@ Item {
                     }
                 }
 
-                // 引用来源与鸣谢
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: creditsColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-
-                    ColumnLayout {
-                        id: creditsColumn
-                        anchors.fill: parent
-                        spacing: 6
-
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "01"
-                            english: "CREDITS"
-                            title: "引用来源与鸣谢"
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Hyps Hub 建立在上游项目、设计规范与公开资料之上。"
-                                  + "界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。"
-                            color: Theme.colors.paper2
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            lineHeight: 1.45
-                            wrapMode: Text.WordWrap
-                        }
-
-                        Repeater {
-                            model: page.credits
-
-                            delegate: RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 10
-
-                                Text {
-                                    Layout.preferredWidth: 118
-                                    text: modelData.name
-                                    color: Theme.colors.paper2
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 11
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: modelData.detail
-                                    color: Theme.colors.muted
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 10
-                                    elide: Text.ElideRight
-                                }
-
-                                ArkButton {
-                                    text: "打开"
-                                    implicitHeight: 30
-                                    ghost: true
-                                    font.pixelSize: 9
-                                    onClicked: AppControl.openExternalUrl(modelData.url)
-                                }
-                            }
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 4
-                            text: "完整来源、许可与致谢见仓库 docs/credits.md。"
-                                  + "Hyps Hub 与鹰角网络、明日方舟无隶属或背书关系；相关商标归其权利人所有。"
-                            color: Theme.colors.disabled
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 10
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                }
-
                 GridLayout {
                     Layout.fillWidth: true
                     columns: page.width > 1120 ? 2 : 1
@@ -302,7 +225,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "02"
+                                index: "01"
                                 english: "BUILD"
                                 title: "版本与系统"
                             }
@@ -342,7 +265,7 @@ Item {
 
                                 SectionHeader {
                                     Layout.fillWidth: true
-                                    index: "03"
+                                    index: "02"
                                     english: "COMPONENT"
                                     title: "Hyps 组件"
                                 }
@@ -418,7 +341,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "04"
+                                index: "03"
                                 english: "LICENSES"
                                 title: "许可与声明"
                             }
@@ -491,7 +414,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "05"
+                                index: "04"
                                 english: "DATA"
                                 title: "数据与隐私"
                             }
@@ -545,6 +468,83 @@ Item {
 
                                 Item { Layout.fillWidth: true }
                             }
+                        }
+                    }
+                }
+
+                // 引用来源与鸣谢
+                ChamferedPanel {
+                    Layout.fillWidth: true
+                    implicitHeight: creditsColumn.implicitHeight + 36
+                    contentMargin: 18
+                    cut: 10
+
+                    ColumnLayout {
+                        id: creditsColumn
+                        anchors.fill: parent
+                        spacing: 6
+
+                        SectionHeader {
+                            Layout.fillWidth: true
+                            index: "05"
+                            english: "CREDITS"
+                            title: "引用来源与鸣谢"
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Hyps Hub 建立在上游项目、设计规范与公开资料之上。"
+                                  + "界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。"
+                            color: Theme.colors.paper2
+                            font.family: App.uiFontFamily
+                            font.pixelSize: 11
+                            lineHeight: 1.45
+                            wrapMode: Text.WordWrap
+                        }
+
+                        Repeater {
+                            model: page.credits
+
+                            delegate: RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 10
+
+                                Text {
+                                    Layout.preferredWidth: 118
+                                    text: modelData.name
+                                    color: Theme.colors.paper2
+                                    font.family: App.uiFontFamily
+                                    font.pixelSize: 11
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.detail
+                                    color: Theme.colors.muted
+                                    font.family: App.uiFontFamily
+                                    font.pixelSize: 10
+                                    elide: Text.ElideRight
+                                }
+
+                                ArkButton {
+                                    text: "打开"
+                                    implicitHeight: 30
+                                    ghost: true
+                                    font.pixelSize: 9
+                                    onClicked: AppControl.openExternalUrl(modelData.url)
+                                }
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 4
+                            text: "完整来源、许可与致谢见仓库 docs/credits.md。"
+                                  + "Hyps Hub 与鹰角网络、明日方舟无隶属或背书关系；相关商标归其权利人所有。"
+                            color: Theme.colors.disabled
+                            font.family: App.uiFontFamily
+                            font.pixelSize: 10
+                            wrapMode: Text.WordWrap
                         }
                     }
                 }

@@ -113,22 +113,6 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - 组件提交、分支、工作区、组件目录与 CLI 入口。
 - 作者/维护者、GPL-3.0-only 许可、原创资产声明、数据目录与隐私说明。
 
-## 引用来源与鸣谢
-
-- **上游项目**：[MoYingJi/Hyps](https://github.com/MoYingJi/Hyps)（GPL-3.0-only）提供 CLI、初始化与游戏启动逻辑。Hyps Hub 不包含其源码。
-- **设计规范**：K-Black 提供的 `docs/design/ARK-STYLE-GUIDE.md` 与 `视觉设计白皮书.md`。
-- **设计语言参考**：[Brandon030722/ark-ui-skill](https://github.com/Brandon030722/ark-ui-skill)、
-  [《明日方舟》UI/UX 分析](https://gameinstitute.qq.com/index.php/knowledge/100122)（腾讯游戏学院 / AJ）、
-  [ignoredone.space 字体库](https://www.ignoredone.space/index.php/fontlab/)、
-  [《「舟味」从何而来》PDF](https://janniewang.net/wp-content/uploads/2023/09/UIUX-analysis-for-Arknights.pdf)。
-- **框架与工具**：Qt 6 / Qt Quick Controls 2、CMake、Ninja、GitHub Actions、Arch Linux `makepkg`。
-- **原创内容**：应用 logo、自绘导航图标、生成的噪点/警戒线纹理、界面与文档；字体仅使用系统本地回退。
-
-界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。
-本项目与鹰角网络、明日方舟无隶属或背书关系。
-
-完整来源、许可与致谢见 [docs/credits.md](docs/credits.md)。
-
 ## 依赖
 
 运行时：
@@ -171,8 +155,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.1.4/ -o hyps-hub-0.1.4.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.4.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.1.5/ -o hyps-hub-0.1.5.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.5.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 
@@ -222,3 +206,19 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 ## 许可
 
 GPL-3.0-only。上游 Hyps 亦为 GPL-3.0-only，但本项目不包含其源码；运行时由用户机器上的独立组件提供。
+
+## 引用来源与鸣谢
+
+- **上游项目**：[MoYingJi/Hyps](https://github.com/MoYingJi/Hyps)（GPL-3.0-only）提供 CLI、初始化与游戏启动逻辑。Hyps Hub 不包含其源码。
+- **设计规范**：K-Black 提供的 `docs/design/ARK-STYLE-GUIDE.md` 与 `视觉设计白皮书.md`。
+- **设计语言参考**：[Brandon030722/ark-ui-skill](https://github.com/Brandon030722/ark-ui-skill)、
+  [《明日方舟》UI/UX 分析](https://gameinstitute.qq.com/index.php/knowledge/100122)（腾讯游戏学院 / AJ）、
+  [ignoredone.space 字体库](https://www.ignoredone.space/index.php/fontlab/)、
+  [《「舟味」从何而来》PDF](https://janniewang.net/wp-content/uploads/2023/09/UIUX-analysis-for-Arknights.pdf)。
+- **框架与工具**：Qt 6 / Qt Quick Controls 2、CMake、Ninja、GitHub Actions、Arch Linux `makepkg`。
+- **原创内容**：应用 logo、自绘导航图标、生成的噪点/警戒线纹理、界面与文档；字体仅使用系统本地回退。
+
+界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。
+本项目与鹰角网络、明日方舟无隶属或背书关系。
+
+完整来源、许可与致谢见 [docs/credits.md](docs/credits.md)。
