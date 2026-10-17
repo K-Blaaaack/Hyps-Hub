@@ -42,6 +42,13 @@ Item {
                     subtitle: "APPEARANCE / ENVIRONMENT / PRIVACY"
 
                     ArkButton {
+                        text: "关于 Hyps Hub"
+                        implicitHeight: 40
+                        ghost: true
+                        onClicked: page.host.navigate("about")
+                    }
+
+                    ArkButton {
                         text: "打开配置目录"
                         implicitHeight: 40
                         ghost: true
@@ -320,69 +327,6 @@ Item {
                                 implicitHeight: 36
                                 ghost: true
                                 onClicked: page.host.navigate("diagnostics")
-                            }
-
-                            Item { Layout.fillWidth: true }
-                        }
-                    }
-                }
-
-                // 关于
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: aboutColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-
-                    ColumnLayout {
-                        id: aboutColumn
-                        anchors.fill: parent
-                        spacing: 8
-
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "04"
-                            english: "ABOUT"
-                            title: "关于 Hyps Hub"
-                        }
-
-                        InfoRow { Layout.fillWidth: true; label: "版本"; value: "v" + App.appVersion }
-                        InfoRow { Layout.fillWidth: true; label: "构建"; value: App.gitCommit }
-                        InfoRow { Layout.fillWidth: true; label: "Qt"; value: App.qtVersion }
-                        InfoRow { Layout.fillWidth: true; label: "系统"; value: App.osPrettyName }
-                        InfoRow { Layout.fillWidth: true; label: "内核"; value: App.kernelVersion }
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "会话"
-                            value: App.sessionType + (App.desktopName.length > 0 ? " / " + App.desktopName : "")
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Hyps Hub 是 Hyps CLI 的独立图形客户端，以 GPL-3.0-only 发布。"
-                                  + "它不包含上游源码，不修改 ~/Hyps，通过独立适配层调用你本地的 Hyps 组件。"
-                            color: Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            lineHeight: 1.4
-                            wrapMode: Text.WordWrap
-                        }
-
-                        RowLayout {
-                            spacing: 8
-
-                            ArkButton {
-                                text: "打开上游项目"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: AppControl.openExternalUrl("https://github.com/MoYingJi/Hyps")
-                            }
-
-                            ArkButton {
-                                text: "许可证"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: AppControl.openExternalUrl("https://www.gnu.org/licenses/gpl-3.0.html")
                             }
 
                             Item { Layout.fillWidth: true }

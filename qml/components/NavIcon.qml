@@ -68,6 +68,12 @@ Canvas {
             ctx.stroke();
             line(10, 2, 10, 4); line(10, 16, 10, 18);
             line(2, 10, 4, 10); line(16, 10, 18, 10);
+        } else if (name === "about") {
+            ctx.beginPath();
+            ctx.arc(10 * step, 10 * step, 7 * step, 0, Math.PI * 2);
+            ctx.stroke();
+            line(10, 9, 10, 14);
+            ctx.fillRect(9.2 * step, 5.4 * step, 1.6 * step, 1.6 * step);
         }
     }
 }

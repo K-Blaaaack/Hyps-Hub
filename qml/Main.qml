@@ -25,7 +25,8 @@ ApplicationWindow {
         { id: "tasks", index: "03", label: "任务", english: "TASKS", icon: "tasks" },
         { id: "config", index: "04", label: "配置", english: "CONFIG", icon: "config" },
         { id: "diagnostics", index: "05", label: "诊断", english: "DIAGNOSTICS", icon: "diagnostics" },
-        { id: "settings", index: "06", label: "设置", english: "SETTINGS", icon: "settings" }
+        { id: "settings", index: "06", label: "设置", english: "SETTINGS", icon: "settings" },
+        { id: "about", index: "07", label: "关于", english: "ABOUT", icon: "about" }
     ]
 
     property int currentIndex: {
@@ -157,6 +158,7 @@ ApplicationWindow {
                         ConfigPage { host: window }
                         DiagnosticsPage { host: window }
                         SettingsPage { host: window }
+                        AboutPage { host: window }
                     }
                 }
             }

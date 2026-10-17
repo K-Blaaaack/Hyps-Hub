@@ -23,9 +23,9 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 
 ## 截图
 
-| 首次初始化 | 游戏配置与启动 |
-| --- | --- |
-| ![初始化](docs/screenshots/onboarding.png) | ![游戏](docs/screenshots/games.png) |
+| 首次初始化 | 游戏配置与启动 | 关于 |
+| --- | --- | --- |
+| ![初始化](docs/screenshots/onboarding.png) | ![游戏](docs/screenshots/games.png) | ![关于](docs/screenshots/about.png) |
 
 ## 依赖
 

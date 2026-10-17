@@ -158,6 +158,7 @@ set(HYPS_HUB_QML
     qml/pages/ConfigPage.qml
     qml/pages/DiagnosticsPage.qml
     qml/pages/SettingsPage.qml
+    qml/pages/AboutPage.qml
 )
 
 qt_add_resources(hyps-hub "hyps-hub-qml"
