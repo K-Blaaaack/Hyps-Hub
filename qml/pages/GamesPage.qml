@@ -33,7 +33,6 @@ Item {
         page.rawMode = false;
         page.syncGameInfo();
         page.refreshIssues();
-        argsArea.text = page.gameCfg ? page.gameCfg.arrayValues("game.args").join("\n") : "";
     }
 
     function doSave() {
@@ -108,9 +107,6 @@ Item {
     onSelectedSlugChanged: {
         page.syncGameInfo();
         page.refreshIssues();
-        if (page.gameCfg) {
-            argsArea.text = page.gameCfg.arrayValues("game.args").join("\n");
-        }
     }
 
     Connections {
@@ -604,73 +600,6 @@ Item {
                                             microSize: 8
                                             tracking: 0.8
                                         }
-                                    }
-                                }
-
-                                // 参数快速编辑（game.args 的显式输入区）
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    visible: !page.rawMode && page.gameCfg
-                                    spacing: 6
-
-                                    MicroLabel {
-                                        label: "GAME.ARGS / 每行一个参数"
-                                        color: Theme.colors.muted
-                                        microSize: 9
-                                        tracking: 1.0
-                                    }
-
-                                    TextArea {
-                                        id: argsArea
-                                        Layout.fillWidth: true
-                                        Layout.preferredHeight: 72
-                                        color: Theme.colors.paper2
-                                        font.family: App.monoFontFamily
-                                        font.pixelSize: 12
-                                        selectByMouse: true
-                                        leftPadding: 10
-                                        topPadding: 8
-                                        placeholderText: "例如：-dx12"
-                                        placeholderTextColor: Theme.colors.disabled
-                                        background: Rectangle {
-                                            color: Theme.colors.ink
-                                            border.width: 1
-                                            border.color: argsArea.activeFocus ? Theme.colors.signal
-                                                                               : Theme.colors.line
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        spacing: 10
-
-                                        ArkButton {
-                                            text: "写入参数"
-                                            implicitHeight: 34
-                                            onClicked: {
-                                                if (!page.gameCfg) {
-                                                    return;
-                                                }
-                                                const lines = argsArea.text.split("\n");
-                                                const values = [];
-                                                for (let i = 0; i < lines.length; ++i) {
-                                                    const trimmed = lines[i].trim();
-                                                    if (trimmed.length > 0 && trimmed.charAt(0) !== "#") {
-                                                        values.push(trimmed);
-                                                    }
-                                                }
-                                                page.gameCfg.setArray("game.args", values);
-                                                page.host.showToast("参数已写入内存，保存后生效");
-                                            }
-                                        }
-
-                                        MicroLabel {
-                                            label: "保存前不会写入磁盘"
-                                            color: Theme.colors.disabled
-                                            microSize: 8
-                                            tracking: 0.8
-                                        }
-
-                                        Item { Layout.fillWidth: true }
                                     }
                                 }
 
