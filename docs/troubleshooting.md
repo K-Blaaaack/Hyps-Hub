@@ -1,6 +1,6 @@
 # 故障排查
 
-先看「诊断」页：它展示的是真实检测结果（GUI 前置条件、上游 `init.sh --check` 报表、运行副本提交与工作区状态），
+先看「诊断」页：它展示的是真实检测结果（GUI 前置条件、上游 `init.sh --check` 报表、Hyps 组件提交与工作区状态），
 并可以导出脱敏诊断包。
 
 ## 初始化相关
@@ -34,11 +34,11 @@ ls -la ~/.local/share/hyps-hub/runtime/Hyps
 
 直接重试即可。Hyps Hub 只会清理本次创建的 `runtime/.Hyps.clone-*` 临时目录。
 
-## 运行副本与更新
+## Hyps 组件与更新
 
 ### 更新按钮不可用 / 提示有未提交修改
 
-运行副本必须保持 Git 工作区干净才能更新。打开运行目录检查：
+Hyps 组件必须保持 Git 工作区干净才能更新。打开组件目录检查：
 
 ```bash
 git -C ~/.local/share/hyps-hub/runtime/Hyps status
@@ -51,7 +51,7 @@ Hyps Hub 不会执行 `reset` / `clean`，请自行处理这些修改后再更�
 更新使用 `git merge --ff-only`，失败不会回退或清理。可在「诊断」页查看 `updateStatusText`，
 或在 `~/.local/share/hyps-hub/logs/runtime.log` 与 `~/.local/state/hyps-hub/update-history.jsonl` 查看记录。
 
-### 「运行副本不完整」
+### 「Hyps 组件不完整」
 
 检查这些文件是否存在：`config.conf`、`init.sh`、`scripts/_Hyps`、`lib/libs.sh`、`lib/common.sh`。
 缺失通常意味着不是完整克隆，可导出诊断包后手动重新初始化（先移走旧目录）。
@@ -60,7 +60,7 @@ Hyps Hub 不会执行 `reset` / `clean`，请自行处理这些修改后再更�
 
 ### 「CLI 不可用」
 
-- 确认运行副本就绪（顶栏 RUNTIME 标签为绿色）。
+- 确认 Hyps 组件就绪（顶栏 COMPONENT 标签为绿色）。
 - 在「诊断」页执行「CLI 帮助」，查看原始输出。
 - 确认 `bash` 已安装：上游脚本需要 Bash >= 4.3。
 
@@ -111,7 +111,7 @@ Hyps Hub 为任务建立独立进程组，取消时向整个进程组发送 `SIG
 - 「任务」页可清空历史（磁盘日志保留）。
 - GUI 配置损坏时会自动备份为 `config.json.corrupt.<时间戳>` 并使用默认值；也可手动删除
   `~/.config/hyps-hub/config.json` 后重启。
-- 删除运行副本、配置与日志前请确认不再需要，Hyps Hub 不会自动清理它们。
+- 删除 Hyps 组件、配置与日志前请确认不再需要，Hyps Hub 不会自动清理它们。
 
 ## 诊断包
 

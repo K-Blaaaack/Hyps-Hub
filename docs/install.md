@@ -67,7 +67,7 @@ sudo pacman -U hyps-hub-0.1.0-1-x86_64.pkg.tar.zst
 注意：
 
 - 包名 `hyps-hub`，可执行文件 `hyps-hub`。
-- 用户配置、运行副本、日志不会被安装到系统目录；运行时才在 XDG 目录中创建。
+- 用户配置、Hyps 组件、日志不会被安装到系统目录；运行时才在 XDG 目录中创建。
 - 卸载包不会删除用户数据。
 
 ## 5. 卸载
@@ -86,7 +86,7 @@ sudo pacman -Rns hyps-hub
 
 两种方式都**不会**删除：
 
-- `~/.local/share/hyps-hub/`（运行副本、缓存、日志、prefix）
+- `~/.local/share/hyps-hub/`（Hyps 组件、缓存、日志、prefix）
 - `~/.config/hyps-hub/`（GUI 配置与 Hyps CLI 配置）
 - `~/.local/state/hyps-hub/`（任务历史、更新记录、环境检测结果）
 

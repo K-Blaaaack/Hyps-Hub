@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 仅删除本地安装的程序文件；绝不删除运行副本、配置、日志与缓存
+# 仅删除本地安装的程序文件；绝不删除 Hyps 组件、配置、日志与缓存
 set -euo pipefail
 
 PREFIX="${PREFIX:-$HOME/.local}"

@@ -261,13 +261,13 @@ Item {
                         SectionHeader {
                             Layout.fillWidth: true
                             index: "03"
-                            english: "RUNTIME"
+                            english: "COMPONENT"
                             title: "运行环境"
                         }
 
                         InfoRow {
                             Layout.fillWidth: true
-                            label: "运行副本"
+                            label: "Hyps 组件"
                             value: App.runtimeDir
                             wrap: true
                         }
@@ -298,7 +298,7 @@ Item {
                             spacing: 8
 
                             ArkButton {
-                                text: "打开运行目录"
+                                text: "打开组件目录"
                                 implicitHeight: 36
                                 ghost: true
                                 onClicked: AppControl.openDirectory(App.runtimeDir)
@@ -360,7 +360,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: "Hyps Hub 是 Hyps CLI 的独立图形客户端，以 GPL-3.0-only 发布。"
-                                  + "它不包含上游源码，不修改 ~/Hyps，通过独立适配层调用你本地的运行副本。"
+                                  + "它不包含上游源码，不修改 ~/Hyps，通过独立适配层调用你本地的 Hyps 组件。"
                             color: Theme.colors.muted
                             font.family: App.uiFontFamily
                             font.pixelSize: 11
@@ -413,7 +413,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: "GUI 配置位于 " + App.configDir + "，Hyps CLI 配置位于 "
-                                  + App.hypsConfigDir + "。卸载应用不会删除运行副本、配置与日志；"
+                                  + App.hypsConfigDir + "。卸载应用不会删除 Hyps 组件、配置与日志；"
                                   + "如需彻底清理请手动删除 XDG 目录。"
                             color: Theme.colors.paper2
                             font.family: App.uiFontFamily

@@ -1,7 +1,7 @@
 # 阶段一 · 技术调研报告
 
 > 调研时间：基于本机 `~/Hyps`（上游 fork，分支 `fix/init-runner-check`，提交 `72191b2`）以及上游 `https://github.com/MoYingJi/Hyps.git` 的 `main` 分支（调研时同为 `72191b2`）。
-> 调研方式：只读阅读源码与文档；不修改 `~/Hyps`。所有命令行为均在 `.research/` 下的独立克隆副本中验证。
+> 调研方式：只读阅读源码与文档；不修改 `~/Hyps`。所有命令行为均在 `.research/` 下的独立克隆中验证。
 
 ## 1. 工作区与环境检查
 
@@ -19,7 +19,7 @@
 | XDG | 全部未显式设置（按默认 `~/.local/share`、`~/.config`、`~/.local/state`、`~/.cache` 解析） |
 | 网络 | 可访问 GitHub（`git ls-remote` 成功） |
 
-结论：`~/Hyps` 是用户正在使用的工作副本，**不能**作为 GUI 的数据目录、配置目录或运行副本。GUI 必须建立独立目录（本仓库 `/home/kb/github/Hyps-Hub`），并在运行时把独立副本克隆到 XDG 数据目录。
+结论：`~/Hyps` 是用户正在使用的工作目录，**不能**作为 GUI 的数据目录、配置目录或 Hyps 组件。GUI 必须建立独立目录（本仓库 `/home/kb/github/Hyps-Hub`），并在运行时把独立组件克隆到 XDG 数据目录。
 
 ## 2. 上游实际结构
 
@@ -94,7 +94,7 @@ config_read_realpath_prefer_env path.temp   TEMP_DIR   "/tmp/hypsc"
 
 `config_read_realpath_prefer_env` 在目标变量**已非空**时直接采用该值。因此 GUI 在启动 CLI 子进程时显式传入
 `CONFIG_DIR` / `CACHE_DIR` / `DATA_DIR` / `TEMP_DIR`，即可把 Hyps 的配置、缓存、prefix/overlay、临时目录全部隔离到
-`hyps-hub` 自己的 XDG 目录，**且完全不写入独立运行副本的 Git 工作区**（保持工作区干净，便于安全更新）。
+`hyps-hub` 自己的 XDG 目录，**且完全不写入独立 Hyps 组件的 Git 工作区**（保持工作区干净，便于安全更新）。
 这是上游源码支持的稳定行为，写在适配层中作为兼容契约。
 
 ## 3. 技术选型记录
@@ -149,7 +149,7 @@ config_read_realpath_prefer_env path.temp   TEMP_DIR   "/tmp/hypsc"
 ## 5. 安全边界
 
 1. 永不写入 `~/Hyps`：GUI 所有数据位于 `$XDG_DATA_HOME/hyps-hub`、`$XDG_CONFIG_HOME/hyps-hub`、`$XDG_STATE_HOME/hyps-hub`。
-2. 调用 CLI 时注入 `CONFIG_DIR/CACHE_DIR/DATA_DIR/TEMP_DIR` 覆盖，使 CLI 不触碰 `~/.config/hypsc`、`~/.local/share/hypsc`、`~/.cache/hypsc`、`/tmp/hypsc`，也不在运行副本内生成配置。
+2. 调用 CLI 时注入 `CONFIG_DIR/CACHE_DIR/DATA_DIR/TEMP_DIR` 覆盖，使 CLI 不触碰 `~/.config/hypsc`、`~/.local/share/hypsc`、`~/.cache/hypsc`、`/tmp/hypsc`，也不在 Hyps 组件内生成配置。
 3. 克隆目标若已存在：先校验，不覆盖；克隆失败仅删除本次创建的临时目录。
 4. 更新仅在 Git 工作区干净时执行 `fetch` + `merge --ff-only`；禁止 `reset --hard`、`clean`。
 5. 所有子进程调用使用参数数组，不使用 `sh -c`；不以 root 运行（检测到 root 时界面明确警告且上游 CLI 自身也会拒绝）。
@@ -159,5 +159,5 @@ config_read_realpath_prefer_env path.temp   TEMP_DIR   "/tmp/hypsc"
 
 - 游戏启动的真实性取决于用户是否安装游戏与 Proton/umu 环境；GUI 不提供任何模拟数据。
 - 上游 `game list` 等表格输出列宽不稳定，GUI 不将其作为主数据源。
-- 上游没有“更新运行副本”命令，GUI 用 Git 实现，并保持为可回退的安全操作（ff-only）。
+- 上游没有“更新 Hyps 组件”命令，GUI 用 Git 实现，并保持为可回退的安全操作（ff-only）。
 - 沙箱打包（Flatpak 等）会限制宿主机游戏与 GPU 访问，因此本次只交付原生 PKGBUILD，不虚构沙箱可用性。

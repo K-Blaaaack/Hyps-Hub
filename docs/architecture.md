@@ -25,7 +25,7 @@
                 │
 ┌───────────────┴─────────────────────────────────────────────┐
 │ External                                                     │
-│  独立 Hyps 运行副本（$XDG_DATA_HOME/hyps-hub/runtime/Hyps）   │
+│  独立 Hyps 组件（$XDG_DATA_HOME/hyps-hub/runtime/Hyps）   │
 │  git / bash / Hyps CLI 子进程                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -37,7 +37,7 @@ UI 层不出现任何命令字符串；所有外部调用都经 `HypsAdapter` �
 | 路径 | 用途 |
 | --- | --- |
 | `${XDG_DATA_HOME:-~/.local/share}/hyps-hub/` | 应用数据根 |
-| `…/hyps-hub/runtime/Hyps/` | 独立 Hyps Git 运行副本 |
+| `…/hyps-hub/runtime/Hyps/` | 独立 Hyps Git Hyps 组件 |
 | `…/hyps-hub/logs/` | 应用日志、`runtime.log` |
 | `…/hyps-hub/logs/tasks/` | 每个任务的输出日志 |
 | `…/hyps-hub/cache/` | 可重新生成的缓存 |
@@ -51,13 +51,13 @@ UI 层不出现任何命令字符串；所有外部调用都经 `HypsAdapter` �
 | `…/hyps-hub/hyps/runners/*.conf` | 运行器配置 |
 | `${XDG_STATE_HOME:-~/.local/state}/hyps-hub/tasks.jsonl` | 任务历史 |
 | `…/hyps-hub/env-report.json` | 最近一次环境检测结果 |
-| `…/hyps-hub/update-history.jsonl` | 运行副本更新记录 |
+| `…/hyps-hub/update-history.jsonl` | Hyps 组件更新记录 |
 
 设计要点：
 
 - **Hyps 配置与 GUI 配置分离**：GUI 配置是 `config.json`，Hyps CLI 配置由 `CONFIG_DIR` 指向 `config/hyps/`。
-- 通过 `CONFIG_DIR/CACHE_DIR/DATA_DIR/TEMP_DIR` 环境变量，CLI 完全不写运行副本工作区，也不与用户自己的 `~/.config/hypsc`、`~/.local/share/hypsc`、`~/.cache/hypsc`、`/tmp/hypsc` 混用。
-- 运行副本保持 Git 干净，更新只需 ff-only 合并；配置不随更新丢失。
+- 通过 `CONFIG_DIR/CACHE_DIR/DATA_DIR/TEMP_DIR` 环境变量，CLI 完全不写 Hyps 组件工作区，也不与用户自己的 `~/.config/hypsc`、`~/.local/share/hypsc`、`~/.cache/hypsc`、`/tmp/hypsc` 混用。
+- Hyps 组件保持 Git 干净，更新只需 ff-only 合并；配置不随更新丢失。
 
 ## 3. 启动流程
 
@@ -93,7 +93,7 @@ main()
 | 环境检测 | `bash` | `<runtime>/init.sh --check` | 隔离环境 | 解析分组报表 |
 | 初始化配置 | `bash` | `<runtime>/init.sh --no-game` | 隔离环境 | 仅写 `CONFIG_DIR` |
 | 创建游戏配置 | `bash` | `<runtime>/init.sh <slug>` | 隔离环境 | 不覆盖已有配置 |
-| 启动游戏 | `bash` | `<runtime>/scripts/<Game>.sh` | 隔离环境 | 工作目录 = 运行副本根 |
+| 启动游戏 | `bash` | `<runtime>/scripts/<Game>.sh` | 隔离环境 | 工作目录 = Hyps 组件根 |
 | 诊断命令 | `bash` | `<runtime>/scripts/_Hyps game list` 等 | 隔离环境 | 白名单：`game list`、`proton list`、`time list`、`--help` |
 
 隔离环境固定注入：
@@ -165,7 +165,7 @@ ready ──applyUpdate──► updating ──成功──► ready
 
 `Diagnostics` 导出目录 `hyps-hub-diagnostics-<时间戳>/`：
 
-- `summary.txt`：应用/Qt/内核/发行版/路径/运行副本提交/依赖统计/GUI 前置条件。
+- `summary.txt`：应用/Qt/内核/发行版/路径/Hyps 组件提交/依赖统计/GUI 前置条件。
 - `env-report.txt`、`runtime-info.json`、`config.json`（GUI 配置）。
 - `task-history.jsonl`（最近 50 条）、`logs/`（最近任务日志尾部）。
 - `README.txt`：内容与隐私说明。
@@ -179,7 +179,7 @@ ready ──applyUpdate──► updating ──成功──► ready
 | ConfigFile | 上游示例配置作为 fixture：解析、往返、编辑、备份、损坏输入 |
 | EnvironmentReport | 真实 `init --check` 输出 + ANSI/异常变体 |
 | ProcessRunner | 临时 bash 脚本：stdout/stderr、退出码、超时、取消、路径空格、非 UTF-8 |
-| HypsAdapter | 假运行副本（bash 脚本模拟 CLI），校验参数数组、环境注入、启动脚本发现、错误路径 |
+| HypsAdapter | 假 Hyps 组件（bash 脚本模拟 CLI），校验参数数组、环境注入、启动脚本发现、错误路径 |
 | RuntimeManager | 注入假 `git`：成功克隆、失败清理、已存在目标不覆盖、脏工作区拒绝更新、ff-only 更新 |
 | UI | `--smoke-test` 在 offscreen + software 后端加载全部 QML；`ctest` 验证退出码 |
 | 网络 | `HYPS_HUB_RUN_NETWORK_TESTS=1` 时执行真实克隆 + 环境检测 + CLI 调用（手动/CI 可选） |
@@ -188,5 +188,5 @@ ready ──applyUpdate──► updating ──成功──► ready
 
 - 不实现游戏库扫描、自动下载/安装游戏或 Proton、多运行环境模板（上游没有对应能力）。
 - 不提供任意命令执行器；仅白名单诊断命令。
-- 不提供“使用 `~/Hyps` 作为运行副本”的隐式行为（未来可由用户显式选择，本期不做）。
+- 不提供“使用 `~/Hyps` 作为 Hyps 组件”的隐式行为（未来可由用户显式选择，本期不做）。
 - 不实现 Flatpak/AppImage（沙箱对宿主机游戏运行环境有实际限制，不做未验证的交付）。

@@ -26,10 +26,10 @@ Item {
     function stateLabel() {
         switch (Runtime.state) {
         case "missing": return "尚未初始化";
-        case "verifying": return "正在检测运行副本";
+        case "verifying": return "正在检测 Hyps 组件";
         case "cloning": return "正在克隆上游仓库";
-        case "ready": return "运行副本就绪";
-        case "invalid": return "运行副本无效";
+        case "ready": return "Hyps 组件就绪";
+        case "invalid": return "Hyps 组件无效";
         case "updating": return "正在更新";
         case "error": return "初始化失败";
         default: return Runtime.state;
@@ -94,7 +94,7 @@ Item {
                 }
 
                 MicroLabel {
-                    label: "FIRST RUN / RUNTIME BOOTSTRAP"
+                    label: "FIRST RUN / COMPONENT SETUP"
                     color: Theme.colors.signal
                     microSize: 9
                     tracking: 1.6
@@ -188,7 +188,7 @@ Item {
 
                     Text {
                         width: Math.min(330, page.width * 0.3)
-                        text: "首次运行会在你的 XDG 数据目录克隆一份独立的 Hyps 运行副本。"
+                        text: "首次运行会在你的 XDG 数据目录创建一份独立的 Hyps 组件。"
                               + "它不会读取、修改或写入你现有的 ~/Hyps 工作区。"
                         color: Theme.colors.paper2
                         font.family: App.uiFontFamily
@@ -199,7 +199,7 @@ Item {
 
                     InfoRow {
                         width: Math.min(350, page.width * 0.32)
-                        label: "运行副本"
+                        label: "Hyps 组件"
                         value: App.runtimeDir
                         wrap: true
                     }
@@ -275,8 +275,8 @@ Item {
                         Layout.fillWidth: true
                         Layout.topMargin: 4
                         index: "02"
-                        english: "RUNTIME"
-                        title: "克隆运行副本"
+                        english: "COMPONENT"
+                        title: "获取 Hyps 组件"
                     }
 
                     ArkProgress {

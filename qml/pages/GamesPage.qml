@@ -859,7 +859,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     visible: Games.templates.length === 0
-                    text: "运行副本尚未就绪，无法读取示例配置。"
+                    text: "Hyps 组件尚未就绪，无法读取示例配置。"
                     color: Theme.colors.warn
                     font.family: App.uiFontFamily
                     font.pixelSize: 11

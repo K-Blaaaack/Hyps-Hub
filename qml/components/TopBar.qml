@@ -68,7 +68,7 @@ Rectangle {
         }
 
         ArkTag {
-            text: Runtime.ready ? "RUNTIME" : "OFFLINE"
+            text: Runtime.ready ? "COMPONENT" : "OFFLINE"
             kind: Runtime.ready ? "state" : "danger"
             implicitHeight: 20
         }

@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import HypsHub 1.0
 import "../components"
 
-/* 诊断：前置检查、环境报表、运行副本更新、白名单命令与脱敏导出 */
+/* 诊断：前置检查、环境报表、Hyps 组件更新、白名单命令与脱敏导出 */
 Item {
     id: page
 
@@ -54,7 +54,7 @@ Item {
                     index: "05"
                     title: "诊断"
                     english: "DIAGNOSTICS"
-                    subtitle: "REAL PROBES / RUNTIME UPDATE / SANITIZED EXPORT"
+                    subtitle: "REAL PROBES / COMPONENT UPDATE / SANITIZED EXPORT"
 
                     ArkButton {
                         text: "导出诊断包"
@@ -302,7 +302,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             visible: !EnvReport.hasReport
-                            text: "尚未运行环境检测。运行副本就绪后点击「重新检测」。"
+                            text: "尚未运行环境检测。Hyps 组件就绪后点击「重新检测」。"
                             color: Theme.colors.muted
                             font.family: App.uiFontFamily
                             font.pixelSize: 11
@@ -310,7 +310,7 @@ Item {
                     }
                 }
 
-                // 运行副本更新
+                // Hyps 组件更新
                 ChamferedPanel {
                     Layout.fillWidth: true
                     implicitHeight: updateColumn.implicitHeight + 36
@@ -326,8 +326,8 @@ Item {
                         SectionHeader {
                             Layout.fillWidth: true
                             index: "03"
-                            english: "RUNTIME UPDATE"
-                            title: "运行副本更新"
+                            english: "COMPONENT UPDATE"
+                            title: "Hyps 组件更新"
                         }
 
                         InfoRow {
@@ -375,8 +375,8 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             visible: Runtime.updateAvailable && Runtime.dirty
-                            text: "运行副本存在未提交的修改，更新会被拒绝。Hyps Hub 不会执行 reset/clean，"
-                                  + "请先在运行目录中手动处理这些修改。"
+                            text: "Hyps 组件存在未提交的修改，更新会被拒绝。Hyps Hub 不会执行 reset/clean，"
+                                  + "请先在组件目录中手动处理这些修改。"
                             color: Theme.colors.warn
                             font.family: App.uiFontFamily
                             font.pixelSize: 11
@@ -404,7 +404,7 @@ Item {
                             }
 
                             ArkButton {
-                                text: "打开运行目录"
+                                text: "打开组件目录"
                                 implicitHeight: 38
                                 ghost: true
                                 onClicked: AppControl.openDirectory(App.runtimeDir)
@@ -503,7 +503,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: "导出为目录：summary、环境检测原始输出、初始化记录、任务历史与日志尾部。"
-                                  + "疑似 token/password/secret 字段会被替换为 ***；不会包含游戏与运行副本文件。"
+                                  + "疑似 token/password/secret 字段会被替换为 ***；不会包含游戏与 Hyps 组件文件。"
                             color: Theme.colors.muted
                             font.family: App.uiFontFamily
                             font.pixelSize: 11

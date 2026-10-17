@@ -82,7 +82,7 @@ void TestNetworkE2E::cloneInitializeAndCheck()
     QVERIFY(waitForTask(initTask, 120000));
     QCOMPARE(initTask->state(), Task::State::Succeeded);
     QVERIFY(QFile::exists(paths.hypsConfigDir() + QStringLiteral("/games/_common.conf")));
-    // 隔离：配置写入 CONFIG_DIR，不进入运行副本工作区
+    // 隔离：配置写入 CONFIG_DIR，不进入 Hyps 组件工作区
     QVERIFY(!QFile::exists(paths.runtimeDir() + QStringLiteral("/config/games/_common.conf")));
 
     Task *checkTask = adapter.checkEnvironment();

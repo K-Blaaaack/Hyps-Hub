@@ -195,8 +195,13 @@ install(FILES
     docs/development.md
     docs/architecture.md
     docs/research.md
-    docs/design/README.md
-    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+    docs/verification.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/hyps-hub"
+)
+
+install(FILES docs/design/README.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/hyps-hub"
+    RENAME design.md
 )
 
 install(FILES licenses/GPL-3.0-only.txt

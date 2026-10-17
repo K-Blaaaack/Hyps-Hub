@@ -80,7 +80,7 @@ Item {
 
     function saveRunner() {
         if (!page.runnerCfg || !Configs.runnerDirectoryIsolated) {
-            page.host.showToast("运行器目录来自运行副本，已禁止写入。请先初始化配置。");
+            page.host.showToast("运行器目录来自 Hyps 组件，已禁止写入。请先初始化配置。");
             return;
         }
         const result = page.runnerCfg.save();
@@ -460,8 +460,8 @@ Item {
 
                             Text {
                                 Layout.fillWidth: true
-                                text: "当前运行器配置来自运行副本的 config/runners（未初始化隔离配置）。"
-                                      + "为避免弄脏运行副本的 Git 工作区，这里禁止写入。"
+                                text: "当前运行器配置来自 Hyps 组件的 config/runners（未初始化隔离配置）。"
+                                      + "为避免弄脏 Hyps 组件的 Git 工作区，这里禁止写入。"
                                 color: Theme.colors.paper2
                                 font.family: App.uiFontFamily
                                 font.pixelSize: 12

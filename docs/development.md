@@ -34,7 +34,7 @@ src/
   diagnostics/
     diagnostics.*              脱敏诊断包导出
 qml/                           Ark 设计语言界面（见 docs/design/）
-tests/                         Qt Test 与假运行副本/假 git
+tests/                         Qt Test 与假 Hyps 组件/假 git
 packaging/                    PKGBUILD、desktop
 scripts/                      构建、运行、本地安装/卸载
 ```
@@ -47,7 +47,7 @@ scripts/                      构建、运行、本地安装/卸载
 | 初始化配置 | `bash` | `<runtime>/init.sh --no-game` | 只写隔离 `CONFIG_DIR` |
 | 创建游戏配置 | `bash` | `<runtime>/init.sh <slug>` | 不覆盖已有配置 |
 | CLI 自检 | `bash` | `<runtime>/scripts/_Hyps --help` | 只读 |
-| 启动游戏 | `bash` | `<runtime>/scripts/<Game>.sh` | 工作目录为运行副本根 |
+| 启动游戏 | `bash` | `<runtime>/scripts/<Game>.sh` | 工作目录为 Hyps 组件根 |
 | 更新 | `git` | `-C <runtime> fetch --prune origin` / `merge --ff-only` | 不 reset/clean |
 
 所有 CLI 调用都注入：
@@ -68,7 +68,7 @@ NO_COLOR=1
 1. 先确认上游源码/文档中的真实参数与退出码；
 2. 在 `HypsAdapter` 内构造参数数组，不经过 shell；
 3. 若命令只用于诊断，加入 `diagnosticActions()` 白名单；
-4. 为参数/输出解析补测试（假运行副本即可）。
+4. 为参数/输出解析补测试（假 Hyps 组件即可）。
 
 ## 4. 测试
 
@@ -82,7 +82,7 @@ ctest --test-dir build --output-on-failure
 - `tst_environmentreport`：真实 `init.sh --check` 输出与 ANSI/异常变体
 - `tst_processrunner`：stdout/stderr、退出码、超时、取消（进程组）、路径空格、非 UTF-8
 - `tst_runtimemanager`：用 `tests/fixtures/fake-git.sh` 模拟克隆/失败/脏工作区/更新
-- `tst_hypsadapter`：假运行副本验证参数、隔离环境、启动脚本发现、白名单
+- `tst_hypsadapter`：假 Hyps 组件验证参数、隔离环境、启动脚本发现、白名单
 - `tst_gamecatalog`、`tst_apppaths`、`tst_diagnostics`
 - `tst_smoke`：以真实进程加载 QML 后退出
 
@@ -100,7 +100,7 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 - `--screenshot <path>`：加载后保存窗口截图（需要 `QT_QPA_PLATFORM=offscreen` 或真实会话）。
 - `QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software`：无显示环境下的 QML 验证。
 - 日志：`~/.local/share/hyps-hub/logs/`；任务日志在 `logs/tasks/`。
-- 运行副本日志：`logs/runtime.log`；更新记录：`~/.local/state/hyps-hub/update-history.jsonl`。
+- Hyps 组件日志：`logs/runtime.log`；更新记录：`~/.local/state/hyps-hub/update-history.jsonl`。
 
 ## 6. 界面设计
 

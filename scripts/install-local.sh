@@ -28,5 +28,5 @@ cat <<MSG
 
 如果 $PREFIX/bin 不在 PATH 中，请自行加入。
 卸载：scripts/uninstall-local.sh
-用户数据（运行副本/配置/日志）不会被删除。
+用户数据（Hyps 组件/配置/日志）不会被删除。
 MSG

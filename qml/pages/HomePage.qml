@@ -41,7 +41,7 @@ Item {
             index: "01"
             title: "首页"
             english: "OVERVIEW"
-            subtitle: "SYSTEM STATUS / LOCAL RUNTIME"
+            subtitle: "SYSTEM STATUS / LOCAL COMPONENT"
 
             ArkButton {
                 text: "重新检测"
@@ -120,8 +120,8 @@ Item {
             StatCard {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 128
-                english: "RUNTIME"
-                label: "Hyps 运行副本"
+                english: "COMPONENT"
+                label: "Hyps 组件"
                 value: Runtime.ready ? (Runtime.commitShort.length > 0 ? Runtime.commitShort : "READY")
                                      : "—"
                 sub: Runtime.ready ? (Runtime.branch + " · " + Runtime.commitSubject)
@@ -445,8 +445,8 @@ Item {
                         SectionHeader {
                             Layout.fillWidth: true
                             index: "04"
-                            english: "RUNTIME"
-                            title: "运行副本"
+                            english: "COMPONENT"
+                            title: "Hyps 组件"
                         }
 
                         InfoRow {
@@ -477,7 +477,7 @@ Item {
                             spacing: 8
 
                             ArkButton {
-                                text: "打开运行目录"
+                                text: "打开组件目录"
                                 implicitHeight: 38
                                 ghost: true
                                 onClicked: AppControl.openDirectory(App.runtimeDir)

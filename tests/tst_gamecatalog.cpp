@@ -43,7 +43,7 @@ void TestGameCatalog::listsConfiguredGamesAndTemplates()
     AppPaths paths(env);
     RuntimeManager runtime(&paths);
 
-    // 运行副本结构 + 一个启动脚本 + 示例模板
+    // Hyps 组件结构 + 一个启动脚本 + 示例模板
     const QString runtimeDir = paths.runtimeDir();
     QDir().mkpath(runtimeDir + QStringLiteral("/config/games.examples"));
     QDir().mkpath(runtimeDir + QStringLiteral("/scripts"));
