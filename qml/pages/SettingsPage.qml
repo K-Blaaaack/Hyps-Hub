@@ -16,15 +16,17 @@ Item {
         { key: "dark", label: "深色" }
     ]
 
-    ScrollView {
+    Flickable {
         id: scroll
         anchors.fill: parent
         clip: true
-        contentWidth: availableWidth
-        ScrollBar.vertical.policy: ScrollBar.AsNeeded
+        contentWidth: width
+        contentHeight: content.implicitHeight + 44
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn }
 
         Item {
-            width: scroll.availableWidth
+            width: scroll.width
             height: content.implicitHeight + 44
 
             ColumnLayout {
