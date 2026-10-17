@@ -98,6 +98,8 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 
 - `--smoke-test`：加载 QML 后 1.5s 退出，用于检查 QML 错误。
 - `--screenshot <path>`：加载后保存窗口截图（需要 `QT_QPA_PLATFORM=offscreen` 或真实会话）。
+- `--preview-dialog <objectName>`：加载后自动打开指定 QML 弹窗，用于截图/调试；例如
+  `--preview-dialog addGameDialog --screenshot add-game.png`。
 - `QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software`：无显示环境下的 QML 验证。
 - 日志：`~/.local/share/hyps-hub/logs/`；任务日志在 `logs/tasks/`。
 - Hyps 组件日志：`logs/runtime.log`；更新记录：`~/.local/state/hyps-hub/update-history.jsonl`。

@@ -79,8 +79,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.1.0/ -o hyps-hub-0.1.0.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.0.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.1.1/ -o hyps-hub-0.1.1.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.1.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 

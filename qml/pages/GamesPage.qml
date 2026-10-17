@@ -656,11 +656,12 @@ Item {
     // 添加游戏配置
     Popup {
         id: addDialog
+        objectName: "addGameDialog"
         modal: true
         focus: true
         padding: 24
         width: Math.min(600, Overlay.overlay ? Overlay.overlay.width - 80 : 600)
-        height: Math.min(520, Overlay.overlay ? Overlay.overlay.height - 80 : 520)
+        height: Math.min(640, Overlay.overlay ? Overlay.overlay.height - 60 : 640)
         anchors.centerIn: Overlay.overlay
         closePolicy: Popup.CloseOnEscape
 
@@ -707,77 +708,154 @@ Item {
                 color: Theme.colors.rule
             }
 
-            ListView {
+            Item {
+                Layout.fillWidth: true
+                height: 20
+
+                MicroLabel {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    label: "游戏 / GAME"
+                    color: Theme.colors.disabled
+                    microSize: 8
+                    tracking: 1.2
+                }
+
+                MicroLabel {
+                    anchors.right: actionHeader.left
+                    anchors.rightMargin: 12
+                    width: 116
+                    label: "状态 / STATUS"
+                    color: Theme.colors.disabled
+                    microSize: 8
+                    tracking: 1.2
+                }
+
+                MicroLabel {
+                    id: actionHeader
+                    anchors.right: parent.right
+                    width: 96
+                    label: "操作 / ACTION"
+                    color: Theme.colors.disabled
+                    microSize: 8
+                    tracking: 1.2
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: Theme.colors.rule
+            }
+
+            Flickable {
+                id: templateFlick
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                model: Games.templates
-                spacing: 0
+                contentWidth: width
+                contentHeight: templateColumn.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
                 ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
-                delegate: Item {
-                    width: ListView.view.width
-                    height: 52
+                ColumnLayout {
+                    id: templateColumn
+                    width: templateFlick.width
+                    spacing: 0
 
-                    RowLayout {
-                        anchors.fill: parent
-                        spacing: 10
+                    Repeater {
+                        model: Games.templates
 
-                        Rectangle {
-                            width: 8
-                            height: 8
-                            color: modelData.configured ? Theme.colors.state : Theme.colors.signal
-                        }
+                        delegate: Item {
+                            width: templateColumn.width
+                            height: 56
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-
-                            Text {
-                                text: modelData.label
-                                color: Theme.colors.paper2
-                                font.family: App.uiFontFamily
-                                font.pixelSize: 13
+                            Rectangle {
+                                x: 0
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 8
+                                height: 8
+                                color: modelData.configured ? Theme.colors.state : Theme.colors.signal
                             }
 
-                            MicroLabel {
-                                label: modelData.slug
-                                color: Theme.colors.muted
-                                microSize: 9
-                                tracking: 0.8
-                            }
-                        }
+                            Column {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 20
+                                anchors.right: statusWrap.left
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 1
 
-                        ArkTag {
-                            text: modelData.configured ? "CONFIGURED" : "TEMPLATE"
-                            kind: modelData.configured ? "state" : "neutral"
-                            implicitHeight: 20
-                        }
-
-                        ArkButton {
-                            text: modelData.configured ? "已存在" : "创建"
-                            implicitHeight: 34
-                            enabled: !modelData.configured && Runtime.ready
-                            onClicked: {
-                                const task = Adapter.createGameConfig(modelData.slug);
-                                if (!task) {
-                                    page.host.showToast("无法创建：" + Adapter.lastError);
-                                    return;
+                                Text {
+                                    width: parent.width
+                                    text: modelData.label
+                                    color: Theme.colors.paper2
+                                    font.family: App.uiFontFamily
+                                    font.pixelSize: 13
+                                    elide: Text.ElideRight
                                 }
-                                addDialog.close();
-                                Tasks.select(task.id);
-                                page.host.navigate("tasks");
+
+                                MicroLabel {
+                                    width: parent.width
+                                    label: modelData.slug
+                                    color: Theme.colors.muted
+                                    microSize: 9
+                                    tracking: 0.8
+                                }
+                            }
+
+                            Item {
+                                id: statusWrap
+                                anchors.right: actionWrap.left
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 116
+                                height: 24
+
+                                ArkTag {
+                                    anchors.left: parent.left
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.configured ? "CONFIGURED" : "TEMPLATE"
+                                    kind: modelData.configured ? "state" : "neutral"
+                                    implicitHeight: 22
+                                }
+                            }
+
+                            Item {
+                                id: actionWrap
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 96
+                                height: 34
+
+                                ArkButton {
+                                    anchors.right: parent.right
+                                    width: 88
+                                    text: modelData.configured ? "已存在" : "创建"
+                                    implicitHeight: 34
+                                    enabled: !modelData.configured && Runtime.ready
+                                    onClicked: {
+                                        const task = Adapter.createGameConfig(modelData.slug);
+                                        if (!task) {
+                                            page.host.showToast("无法创建：" + Adapter.lastError);
+                                            return;
+                                        }
+                                        addDialog.close();
+                                        Tasks.select(task.id);
+                                        page.host.navigate("tasks");
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                height: 1
+                                color: Theme.colors.rule
+                                opacity: 0.6
                             }
                         }
-                    }
-
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.bottom: parent.bottom
-                        height: 1
-                        color: Theme.colors.rule
-                        opacity: 0.6
                     }
                 }
             }

@@ -53,6 +53,11 @@ int main(int argc, char *argv[])
             QStringLiteral("加载后把窗口截图保存到指定文件并退出"),
             QStringLiteral("path"));
     parser.addOption(screenshotOption);
+    QCommandLineOption previewDialogOption(
+            QStringLiteral("preview-dialog"),
+            QStringLiteral("打开指定 objectName 的 QML 弹窗（用于截图/调试）"),
+            QStringLiteral("objectName"));
+    parser.addOption(previewDialogOption);
     parser.process(application);
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
@@ -165,6 +170,21 @@ int main(int argc, char *argv[])
     if (parser.isSet(smokeOption)) {
         QTextStream(stdout) << "smoke-test: QML 已加载，退出\n";
         QTimer::singleShot(1500, &application, []() { QCoreApplication::quit(); });
+    }
+
+    if (parser.isSet(previewDialogOption)) {
+        const QString objectName = parser.value(previewDialogOption);
+        QTimer::singleShot(1200, &application, [&engine, objectName]() {
+            if (engine.rootObjects().isEmpty()) {
+                return;
+            }
+            QObject *target = engine.rootObjects().first()->findChild<QObject *>(objectName);
+            if (target) {
+                QMetaObject::invokeMethod(target, "open");
+            } else {
+                QTextStream(stderr) << "找不到弹窗：" << objectName << '\n';
+            }
+        });
     }
 
     if (parser.isSet(screenshotOption)) {

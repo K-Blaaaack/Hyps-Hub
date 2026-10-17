@@ -1,6 +1,6 @@
 # Maintainer: Hyps Hub contributors
 pkgname=hyps-hub
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc='Hyps CLI 的原生 Qt 图形客户端（独立 Hyps 组件与配置隔离）'
 arch=('x86_64')
