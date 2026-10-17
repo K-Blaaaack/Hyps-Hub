@@ -80,17 +80,19 @@ Item {
                         delegate: TaskItem {
                             width: taskList.width
                             indexText: (index + 1).toString().padStart(2, "0")
-                            label: label
-                            state: state
-                            stateText: stateText
-                            detail: kind
-                            whenText: startedAt ? Qt.formatDateTime(startedAt, "MM-dd hh:mm:ss") : ""
-                            durationText: durationText
-                            exitCode: exitCode
-                            hasExitCode: hasExitCode
-                            active: active
-                            selected: Tasks.currentTask !== null && Tasks.currentTask.id === taskId
-                            onClicked: Tasks.select(taskId)
+                            label: model.label
+                            state: model.state
+                            stateText: model.stateText
+                            detail: model.kind
+                            whenText: model.startedAt
+                                      ? Qt.formatDateTime(model.startedAt, "MM-dd hh:mm:ss") : ""
+                            durationText: model.durationText
+                            exitCode: model.exitCode
+                            hasExitCode: model.hasExitCode
+                            active: model.active
+                            selected: Tasks.currentTask !== null
+                                      && Tasks.currentTask.id === model.taskId
+                            onClicked: Tasks.select(model.taskId)
                         }
                     }
 

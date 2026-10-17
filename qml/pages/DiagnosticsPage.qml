@@ -11,6 +11,22 @@ Item {
     property var host
     property bool showRaw: false
     property string exportDir: Diag.defaultExportDirectory()
+    property bool networkCheckStarted: false
+
+    function ensureNetworkCheck() {
+        if (!page.networkCheckStarted && Runtime.ready
+            && Runtime.networkStatus === "idle") {
+            page.networkCheckStarted = true;
+            Runtime.checkNetwork();
+        }
+    }
+
+    Component.onCompleted: ensureNetworkCheck()
+
+    Connections {
+        target: Runtime
+        function onStateChanged() { page.ensureNetworkCheck(); }
+    }
 
     function runAction(actionId) {
         const task = Adapter.runDiagnostic(actionId);

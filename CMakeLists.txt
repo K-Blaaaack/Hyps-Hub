@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(HypsHub
-    VERSION 0.1.1
+    VERSION 0.1.2
     DESCRIPTION "Hyps Hub - a native Linux desktop client for the Hyps CLI"
     HOMEPAGE_URL "https://github.com/MoYingJi/Hyps"
     LANGUAGES CXX

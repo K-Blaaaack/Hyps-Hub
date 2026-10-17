@@ -269,7 +269,7 @@ Item {
                             Layout.fillWidth: true
                             index: "03"
                             english: "COMPONENT"
-                            title: "运行环境"
+                            title: "Hyps 组件"
                         }
 
                         InfoRow {
@@ -349,7 +349,7 @@ Item {
 
                         SectionHeader {
                             Layout.fillWidth: true
-                            index: "05"
+                            index: "04"
                             english: "PRIVACY"
                             title: "数据与退出"
                         }

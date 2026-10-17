@@ -171,17 +171,18 @@ Item {
                 model: page.tabDefs
 
                 delegate: Item {
-                    width: tabText.implicitWidth + 8
+                    width: tabColumn.implicitWidth + 20
                     height: 42
 
                     Column {
+                        id: tabColumn
                         spacing: 6
 
                         Row {
                             spacing: 8
 
                             MicroLabel {
-                                label: page.tab === index ? "0" + (index + 1) : "0" + (index + 1)
+                                label: "0" + (index + 1)
                                 color: page.tab === index ? Theme.colors.signal : Theme.colors.disabled
                                 microSize: 8
                                 tracking: 1.0
@@ -205,7 +206,7 @@ Item {
                         }
 
                         Rectangle {
-                            width: tabText.implicitWidth + 40
+                            width: tabColumn.width
                             height: 2
                             color: page.tab === index ? Theme.colors.signal : "transparent"
                         }

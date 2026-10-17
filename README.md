@@ -6,8 +6,6 @@
 Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面客户端（Qt 6 / QML），
 目标是让你用图形界面完成 Hyps 的日常操作，同时保持 **GUI 与 CLI 解耦、运行环境独立、数据隔离**。
 
-![首页](docs/screenshots/home.png)
-
 ## 特性
 
 - **首次初始化向导**：检查 Git / Bash / 网络，异步克隆独立的 Hyps 组件（带进度、失败可重试）。
@@ -24,18 +22,87 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - **Ark 设计语言界面**：近黑墨底、单一青色信号、0 圆角、1px 细线、45° 切角、NN 索引与双纹理；
   跟随系统深浅色，支持手动切换。
 
-## 截图
+## 界面与使用教程
 
-| 首次初始化 | 游戏配置与启动 | 关于 |
-| --- | --- | --- |
-| ![初始化](docs/screenshots/onboarding.png) | ![游戏](docs/screenshots/games.png) | ![关于](docs/screenshots/about.png) |
+### 01 首次初始化
 
-### 添加游戏配置
+![首次初始化](docs/screenshots/onboarding.png)
 
-`TEMPLATE` 表示隔离的 `CONFIG_DIR/games/` 里还没有该游戏的配置；点击「创建」会从上游
-`config/games.examples` 复制一份，不覆盖已有配置，也不读取或修改 `~/Hyps`。
+首次启动会进入独立的初始化向导：
 
-<img src="docs/screenshots/add-game.png" alt="添加游戏配置" width="720">
+1. 检查 Git、Bash、数据目录与网络；缺失项会直接给出提示。
+2. 点击「开始初始化」后，异步克隆上游 Hyps 到 `$XDG_DATA_HOME/hyps-hub/runtime/Hyps`，显示进度与实时日志。
+3. 克隆完成后自动执行 `init.sh --no-game`，把配置写入隔离的 `CONFIG_DIR`。
+4. 失败可安全重试；已存在的目标目录不会被覆盖，也不会触碰 `~/Hyps`。
+
+### 02 首页
+
+![首页](docs/screenshots/home.png)
+
+- 四张状态卡展示应用版本、组件提交、CLI 可用性与依赖检测结果。
+- 「环境检测」面板展示真实 `init.sh --check` 报表，可滚动查看全部项目。
+- 右侧展示最近任务与组件详情（提交、分支、工作区、CLI 入口）。
+- 顶部可快速重新检测；底部「快捷操作」可直达游戏、配置与更新检查。
+
+### 03 游戏配置与启动
+
+![游戏配置](docs/screenshots/games.png)
+
+- 左侧列出 `CONFIG_DIR/games/*.conf` 中的已配置游戏，并标注就绪/警告状态。
+- 右侧可视化编辑 `game.exe`、`runner.name`、`game.args` 等字段；保存前校验，并自动生成 `.bak.<时间戳>` 备份。
+- 底部显示启动命令与隔离环境；只有配置完整且已保存时「启动游戏」才可用。
+- 启动通过上游 `scripts/<Game>.sh` 执行，实时输出进入「任务」页。
+
+### 04 添加游戏配置
+
+![添加游戏配置](docs/screenshots/add-game.png)
+
+- 来源是组件内的 `config/games.examples`，不会读取 `~/Hyps`。
+- `TEMPLATE` 表示隔离配置目录中还没有该游戏；点击「创建」复制示例配置，不会覆盖已有文件。
+- 创建后变为 `CONFIGURED`，再回到游戏页填写 `game.exe` 与运行器即可。
+
+### 05 任务与日志
+
+![任务与日志](docs/screenshots/tasks.png)
+
+- 左侧任务列表显示状态、时间、耗时与退出码；右侧实时显示 stdout/stderr。
+- 支持过滤、复制、清空视图、取消运行中的任务（按进程组终止）。
+- 历史任务最多保留 200 条；每个任务的完整日志保存在 `logs/tasks/`。
+- 重启后打开历史任务会自动从磁盘载入日志。
+
+### 06 配置管理
+
+![配置管理](docs/screenshots/config.png)
+
+- 「通用配置」按功能分组展示 MangoHud、GameMode、缓存、taskset、Overlay、时长记录等开关。
+- 每个字段可恢复默认（删除该键）；未知键可通过「原始编辑器」修改，保存前完整校验。
+- 「运行器」页只允许编辑隔离配置目录中的 `runners/*.conf`，来自组件的文件会标记只读。
+- 「路径」页展示 GUI 配置、组件、缓存、数据、状态等真实目录，并可打开。
+
+### 07 诊断
+
+![诊断](docs/screenshots/diagnostics.png)
+
+- GUI 前置检查（Git/Bash/数据目录/网络/组件）全部来自真实检测。
+- 环境报表、组件更新状态（`git fetch` + `git merge --ff-only`，脏工作区拒绝）。
+- 白名单诊断命令：环境检测、CLI 帮助、游戏列表、Proton 列表、游玩时长。
+- 可导出脱敏诊断包（summary、环境报表、任务历史、日志尾部、SHA 说明）。
+
+### 08 设置
+
+![设置](docs/screenshots/settings.png)
+
+- 主题跟随系统，也可固定浅色/深色；保持 Ark 令牌与零圆角几何。
+- 桌面通知（D-Bus，服务不可用时静默降级）、高级模式、窗口状态。
+- 组件信息与快捷入口；隐私说明与退出行为。
+
+### 09 关于
+
+![关于](docs/screenshots/about.png)
+
+- 应用版本、构建提交、Qt、系统、内核、会话。
+- 组件提交、分支、工作区、组件目录与 CLI 入口。
+- 作者/维护者、GPL-3.0-only 许可、原创资产声明、数据目录与隐私说明。
 
 ## 依赖
 
@@ -79,8 +146,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.1.1/ -o hyps-hub-0.1.1.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.1.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.1.2/ -o hyps-hub-0.1.2.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.2.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 

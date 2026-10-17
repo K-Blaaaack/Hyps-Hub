@@ -537,11 +537,17 @@ Task *TaskManager::taskById(const QString &taskId) const
 
 void TaskManager::setCurrentTask(Task *task)
 {
-    if (m_currentTask == task) {
+    if (m_currentTask == task && !(task && !task->active()
+                                   && task->log()->totalCount() == 0)) {
         return;
     }
     m_currentTask = task;
     emit currentTaskChanged();
+
+    // 历史任务在重启后没有内存日志，切换时按需从磁盘载入，避免日志页空白。
+    if (task && !task->active() && task->log()->totalCount() == 0) {
+        loadLogInto(task);
+    }
 }
 
 int TaskManager::activeCount() const

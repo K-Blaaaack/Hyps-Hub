@@ -79,38 +79,29 @@ Item {
                 elide: Text.ElideRight
             }
 
-            RowLayout {
-                spacing: 8
-
-                MicroLabel {
-                    label: root.detail.length > 0 ? root.detail : root.state
-                    color: Theme.colors.muted
-                    microSize: 9
-                    tracking: 0.8
+            MicroLabel {
+                Layout.fillWidth: true
+                label: {
+                    const parts = [];
+                    if (root.detail.length > 0) {
+                        parts.push(root.detail);
+                    }
+                    if (root.whenText.length > 0) {
+                        parts.push(root.whenText);
+                    }
+                    if (root.durationText.length > 0) {
+                        parts.push(root.durationText);
+                    }
+                    if (root.hasExitCode) {
+                        parts.push("EXIT " + root.exitCode);
+                    }
+                    return parts.join(" · ");
                 }
-
-                MicroLabel {
-                    label: root.whenText
-                    color: Theme.colors.disabled
-                    microSize: 9
-                    tracking: 0.6
-                }
-
-                MicroLabel {
-                    visible: root.durationText.length > 0
-                    label: root.durationText
-                    color: Theme.colors.disabled
-                    microSize: 9
-                    tracking: 0.6
-                }
-
-                MicroLabel {
-                    visible: root.hasExitCode
-                    label: "EXIT " + root.exitCode
-                    color: root.exitCode === 0 ? Theme.colors.muted : Theme.colors.danger
-                    microSize: 9
-                    tracking: 0.6
-                }
+                color: root.hasExitCode && root.exitCode !== 0
+                       ? Theme.colors.danger : Theme.colors.muted
+                microSize: 9
+                tracking: 0.6
+                elide: Text.ElideRight
             }
         }
 
