@@ -10,6 +10,25 @@ Item {
 
     property var host
 
+    readonly property var credits: [
+        { name: "上游 Hyps", detail: "MoYingJi/Hyps · CLI 与游戏启动逻辑 · GPL-3.0-only",
+          url: "https://github.com/MoYingJi/Hyps" },
+        { name: "设计规范", detail: "K-Black《ARK-STYLE-GUIDE》《视觉设计白皮书》",
+          url: "https://github.com/K-Blaaaack/Hyps-Hub/tree/main/docs/design" },
+        { name: "设计语言参考", detail: "Brandon030722/ark-ui-skill",
+          url: "https://github.com/Brandon030722/ark-ui-skill" },
+        { name: "UI/UX 分析", detail: "腾讯游戏学院 · AJ《明日方舟 UI/UX 分析》",
+          url: "https://gameinstitute.qq.com/index.php/knowledge/100122" },
+        { name: "字体与资料", detail: "ignoredone.space 字体库",
+          url: "https://www.ignoredone.space/index.php/fontlab/" },
+        { name: "分析文章", detail: "《「舟味」从何而来》PDF",
+          url: "https://janniewang.net/wp-content/uploads/2023/09/UIUX-analysis-for-Arknights.pdf" },
+        { name: "框架", detail: "Qt 6 / Qt Quick Controls 2 · LGPL-3.0 / GPL-3.0（动态链接）",
+          url: "https://www.qt.io/" },
+        { name: "构建与发布", detail: "CMake · Ninja · GitHub Actions · Arch Linux makepkg",
+          url: "https://github.com/K-Blaaaack/Hyps-Hub/actions" }
+    ]
+
     ScrollView {
         id: scroll
         anchors.fill: parent
@@ -186,6 +205,83 @@ Item {
                     }
                 }
 
+                // 引用来源与鸣谢
+                ChamferedPanel {
+                    Layout.fillWidth: true
+                    implicitHeight: creditsColumn.implicitHeight + 36
+                    contentMargin: 18
+                    cut: 10
+
+                    ColumnLayout {
+                        id: creditsColumn
+                        anchors.fill: parent
+                        spacing: 6
+
+                        SectionHeader {
+                            Layout.fillWidth: true
+                            index: "01"
+                            english: "CREDITS"
+                            title: "引用来源与鸣谢"
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Hyps Hub 建立在上游项目、设计规范与公开资料之上。"
+                                  + "界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。"
+                            color: Theme.colors.paper2
+                            font.family: App.uiFontFamily
+                            font.pixelSize: 11
+                            lineHeight: 1.45
+                            wrapMode: Text.WordWrap
+                        }
+
+                        Repeater {
+                            model: page.credits
+
+                            delegate: RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 10
+
+                                Text {
+                                    Layout.preferredWidth: 118
+                                    text: modelData.name
+                                    color: Theme.colors.paper2
+                                    font.family: App.uiFontFamily
+                                    font.pixelSize: 11
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: modelData.detail
+                                    color: Theme.colors.muted
+                                    font.family: App.uiFontFamily
+                                    font.pixelSize: 10
+                                    elide: Text.ElideRight
+                                }
+
+                                ArkButton {
+                                    text: "打开"
+                                    implicitHeight: 30
+                                    ghost: true
+                                    font.pixelSize: 9
+                                    onClicked: AppControl.openExternalUrl(modelData.url)
+                                }
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 4
+                            text: "完整来源、许可与致谢见仓库 docs/credits.md。"
+                                  + "Hyps Hub 与鹰角网络、明日方舟无隶属或背书关系；相关商标归其权利人所有。"
+                            color: Theme.colors.disabled
+                            font.family: App.uiFontFamily
+                            font.pixelSize: 10
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                }
+
                 GridLayout {
                     Layout.fillWidth: true
                     columns: page.width > 1120 ? 2 : 1
@@ -206,7 +302,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "01"
+                                index: "02"
                                 english: "BUILD"
                                 title: "版本与系统"
                             }
@@ -246,7 +342,7 @@ Item {
 
                                 SectionHeader {
                                     Layout.fillWidth: true
-                                    index: "02"
+                                    index: "03"
                                     english: "COMPONENT"
                                     title: "Hyps 组件"
                                 }
@@ -322,7 +418,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "03"
+                                index: "04"
                                 english: "LICENSES"
                                 title: "许可与声明"
                             }
@@ -395,7 +491,7 @@ Item {
 
                             SectionHeader {
                                 Layout.fillWidth: true
-                                index: "04"
+                                index: "05"
                                 english: "DATA"
                                 title: "数据与隐私"
                             }

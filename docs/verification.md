@@ -88,16 +88,16 @@ share/licenses/hyps-hub/GPL-3.0-only.txt
 ```
 
 `desktop-file-validate` 仅提示 Categories 建议（已改为单一 `Game;`）。
-安装后的二进制以 `--version` 输出 `hyps-hub 0.1.3`。
+安装后的二进制以 `--version` 输出 `hyps-hub 0.1.4`。
 
 ### Arch PKGBUILD
 
 ```bash
-git archive --prefix=hyps-hub-0.1.3/ -o hyps-hub-0.1.3.tar.gz HEAD
+git archive --prefix=hyps-hub-0.1.4/ -o hyps-hub-0.1.4.tar.gz HEAD
 makepkg -f
 ```
 
-实际结果：`hyps-hub 0.1.3-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
+实际结果：`hyps-hub 0.1.4-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
 包内容包含可执行文件、desktop、图标、文档、许可证；无安装脚本，不写系统级用户配置。
 从包中解出的二进制在独立 XDG 目录下可正常执行 `--version`，`ldd` 无缺失库。
 
