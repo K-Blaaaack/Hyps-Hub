@@ -117,8 +117,7 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4
-                                text: "Hyps CLI 的独立图形客户端。通过适配层调用本机独立的 Hyps 组件，"
-                                      + "不包含上游源码，不修改 ~/Hyps，也不与用户的 hypsc 配置混用。"
+                                text: "Hyps CLI 的独立图形客户端。通过适配层调用本机独立的 Hyps 组件。"
                                 color: Theme.colors.paper2
                                 font.family: App.uiFontFamily
                                 font.pixelSize: 12
