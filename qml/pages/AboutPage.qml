@@ -172,6 +172,12 @@ Item {
 
                             InfoRow {
                                 Layout.fillWidth: true
+                                label: "作者"
+                                value: "K-Black"
+                            }
+
+                            InfoRow {
+                                Layout.fillWidth: true
                                 label: "工作区"
                                 value: Runtime.ready ? (Runtime.dirty ? "有修改" : "干净") : "—"
                                 valueColor: Runtime.dirty ? Theme.colors.warn : Theme.colors.paper2
@@ -206,6 +212,7 @@ Item {
                             }
 
                             InfoRow { Layout.fillWidth: true; label: "应用版本"; value: "v" + App.appVersion }
+                            InfoRow { Layout.fillWidth: true; label: "作者 / 维护"; value: "K-Black" }
                             InfoRow { Layout.fillWidth: true; label: "构建提交"; value: App.gitCommit }
                             InfoRow { Layout.fillWidth: true; label: "Qt"; value: App.qtVersion }
                             InfoRow { Layout.fillWidth: true; label: "系统"; value: App.osPrettyName }
@@ -333,6 +340,15 @@ Item {
 
                             Text {
                                 Layout.fillWidth: true
+                                text: "作者 / 维护：K-Black（GitHub: K-Blaaaack）。"
+                                color: Theme.colors.paper2
+                                font.family: App.uiFontFamily
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
                                 text: "界面遵循用户提供的 Ark 设计规范，仅采用设计语言（近黑墨底、单一青色信号、"
                                       + "0 圆角、45° 切角、索引与双纹理）。不包含任何鹰角专有资产；"
                                       + "图形为原创几何标记、自生成纹理与自绘线性图标，字体仅使用系统本地回退。"
@@ -351,6 +367,13 @@ Item {
                                     implicitHeight: 34
                                     ghost: true
                                     onClicked: AppControl.openExternalUrl("https://www.gnu.org/licenses/gpl-3.0.html")
+                                }
+
+                                ArkButton {
+                                    text: "维护者 GitHub"
+                                    implicitHeight: 34
+                                    ghost: true
+                                    onClicked: AppControl.openExternalUrl("https://github.com/K-Blaaaack")
                                 }
 
                                 Item { Layout.fillWidth: true }
@@ -450,7 +473,7 @@ Item {
                     Item { Layout.fillWidth: true }
 
                     MicroLabel {
-                        label: "GPL-3.0-ONLY"
+                        label: "AUTHOR K-BLACK · GPL-3.0-ONLY"
                         color: Theme.colors.muted
                         microSize: 8
                         tracking: 1.2
