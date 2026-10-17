@@ -1,0 +1,39 @@
+# Maintainer: Hyps Hub contributors
+pkgname=hyps-hub
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Hyps CLI 的原生 Qt 图形客户端（独立运行副本与配置隔离）'
+arch=('x86_64')
+url='https://github.com/MoYingJi/Hyps'
+license=('GPL-3.0-only')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'bash' 'git')
+makedepends=('cmake' 'ninja')
+optdepends=(
+    'umu-launcher: umu 系运行器（上游默认运行器需要）'
+    'mangohud: MangoHud 性能覆盖层'
+    'gamemode: GameMode'
+    'gamescope: Gamescope 包装器'
+    'fuse-overlayfs: OverlayFS 功能'
+    'python3: 上游部分可选功能'
+    'gcc: 编译上游 C 工具'
+    'mingw-w64-gcc: 终末地替身父进程模式'
+    'vulkan-tools: Vulkan 诊断'
+)
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake -S "$pkgname-$pkgver" -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTING=ON
+    cmake --build build
+}
+
+check() {
+    ctest --test-dir build --output-on-failure
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build --prefix /usr
+}

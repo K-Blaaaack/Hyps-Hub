@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Hyps Hub
+GenericName=Hyps CLI 图形客户端
+Comment=管理独立的 Hyps 运行副本、配置与游戏启动
+Exec=hyps-hub
+Icon=hyps-hub
+Terminal=false
+Categories=Game;Utility;
+Keywords=hyps;wine;proton;umu;game;launcher;
+StartupNotify=true
+StartupWMClass=hyps-hub

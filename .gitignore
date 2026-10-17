@@ -1,0 +1,26 @@
+# 构建产物
+/build/
+/build-*/
+/cmake-build-*/
+/compile_commands.json
+/.cache/
+/.research/
+
+# Qt / CMake 生成物
+CMakeUserPresets.json
+*.user
+.qmlc/
+*.qmlc
+*.jsc
+
+# 打包产物
+/pkg/
+/src/
+*.pkg.tar.zst
+*.tar.gz
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+*~
