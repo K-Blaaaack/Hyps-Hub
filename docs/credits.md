@@ -2,6 +2,11 @@
 
 Hyps Hub 是一个独立开源项目，下列来源与项目构成了它的基础。感谢所有作者与维护者。
 
+## 特别鸣谢
+
+特别鸣谢 **[MoYingJi](https://github.com/MoYingJi)** —— 上游 [Hyps](https://github.com/MoYingJi/Hyps)
+的作者。Hyps Hub 的 CLI 调用、初始化流程、配置格式与游戏启动逻辑都建立在该项目之上。
+
 ## 1. 上游项目
 
 | 项目 | 用途 | 许可 |
@@ -14,10 +19,10 @@ Hyps Hub 不包含上游源码。运行时由本机独立克隆的 Hyps 组件�
 
 ## 2. 设计规范与界面语言
 
+项目内的 `docs/design/` 是实现与验收文档，不作为第三方来源列出。设计语言参考：
+
 | 来源 | 用途 |
 | --- | --- |
-| `docs/design/ARK-STYLE-GUIDE.md` | 用户提供的 Ark / 明日方舟风格通用设计规范（色彩、字体、切角、组件、动效、验收清单） |
-| `docs/design/视觉设计白皮书.md` | 用户提供的视觉系统说明、实现记录与参考源萃取 |
 | [Brandon030722/ark-ui-skill](https://github.com/Brandon030722/ark-ui-skill) | 设计语言与生产站点实现证据参考 |
 | [《明日方舟》UI/UX 分析](https://gameinstitute.qq.com/index.php/knowledge/100122)（腾讯游戏学院，作者 AJ） | 画内界面、双签名纹理、层级与过场分析 |
 | [ignoredone.space 字体库](https://www.ignoredone.space/index.php/fontlab/) | 方舟设计圈字体选型参考 |
@@ -52,9 +57,9 @@ JetBrains Maple Mono（SIL OFL 1.1）；实际使用以用户系统已安装字�
 ## 5. 作者与致谢
 
 - 作者 / 维护：[K-Black](https://github.com/K-Blaaaack)
-- 界面实现与文档整理：K-Black 与 AI 助手协作
-- 感谢上游 Hyps 作者 **MoYingJi** 与所有贡献者
-- 感谢设计规范与白皮书的整理者、以及上述分析文章与字体资料作者
+- **特别鸣谢**：[MoYingJi](https://github.com/MoYingJi)，上游 Hyps 作者
+- 感谢上游 Hyps 的所有贡献者
+- 感谢上述设计语言参考、分析文章与字体资料的作者
 
 ## 6. 商标与免责声明
 

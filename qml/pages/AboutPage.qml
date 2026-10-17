@@ -11,10 +11,10 @@ Item {
     property var host
 
     readonly property var credits: [
-        { name: "上游 Hyps", detail: "MoYingJi/Hyps · CLI 与游戏启动逻辑 · GPL-3.0-only",
+        { name: "特别鸣谢", detail: "MoYingJi · 上游 Hyps 作者",
+          url: "https://github.com/MoYingJi" },
+        { name: "上游项目", detail: "MoYingJi/Hyps · CLI 与游戏启动逻辑 · GPL-3.0-only",
           url: "https://github.com/MoYingJi/Hyps" },
-        { name: "设计规范", detail: "K-Black《ARK-STYLE-GUIDE》《视觉设计白皮书》",
-          url: "https://github.com/K-Blaaaack/Hyps-Hub/tree/main/docs/design" },
         { name: "设计语言参考", detail: "Brandon030722/ark-ui-skill",
           url: "https://github.com/Brandon030722/ark-ui-skill" },
         { name: "UI/UX 分析", detail: "腾讯游戏学院 · AJ《明日方舟 UI/UX 分析》",
@@ -493,7 +493,7 @@ Item {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "Hyps Hub 建立在上游项目、设计规范与公开资料之上。"
+                            text: "Hyps Hub 建立在上游项目、公开的设计语言参考与资料之上。"
                                   + "界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。"
                             color: Theme.colors.paper2
                             font.family: App.uiFontFamily

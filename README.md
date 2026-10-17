@@ -155,8 +155,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.1.5/ -o hyps-hub-0.1.5.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.5.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.1.6/ -o hyps-hub-0.1.6.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.1.6.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 
@@ -209,8 +209,10 @@ GPL-3.0-only。上游 Hyps 亦为 GPL-3.0-only，但本项目不包含其源码�
 
 ## 引用来源与鸣谢
 
-- **上游项目**：[MoYingJi/Hyps](https://github.com/MoYingJi/Hyps)（GPL-3.0-only）提供 CLI、初始化与游戏启动逻辑。Hyps Hub 不包含其源码。
-- **设计规范**：K-Black 提供的 `docs/design/ARK-STYLE-GUIDE.md` 与 `视觉设计白皮书.md`。
+**特别鸣谢 [MoYingJi](https://github.com/MoYingJi)** —— 上游 [Hyps](https://github.com/MoYingJi/Hyps) 的作者，
+本项目的 CLI、初始化、配置格式与游戏启动逻辑均来自该项目。
+
+- **上游项目**：[MoYingJi/Hyps](https://github.com/MoYingJi/Hyps)（GPL-3.0-only）。Hyps Hub 不包含其源码。
 - **设计语言参考**：[Brandon030722/ark-ui-skill](https://github.com/Brandon030722/ark-ui-skill)、
   [《明日方舟》UI/UX 分析](https://gameinstitute.qq.com/index.php/knowledge/100122)（腾讯游戏学院 / AJ）、
   [ignoredone.space 字体库](https://www.ignoredone.space/index.php/fontlab/)、
