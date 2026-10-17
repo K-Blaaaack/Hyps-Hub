@@ -1,5 +1,8 @@
 # Hyps Hub
 
+[![CI](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/ci.yml)
+[![Release](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/release.yml/badge.svg)](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/release.yml)
+
 Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面客户端（Qt 6 / QML），
 目标是让你用图形界面完成 Hyps 的日常操作，同时保持 **GUI 与 CLI 解耦、运行环境独立、数据隔离**。
 

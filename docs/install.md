@@ -44,7 +44,21 @@ ctest --test-dir build --output-on-failure
 
 如果 `~/.local/bin` 不在 `PATH` 中，请自行加入。
 
-## 4. Arch Linux 打包
+## 4. 从 GitHub Releases 安装
+
+发布页会提供：
+
+- `hyps-hub-<版本>-1-x86_64.pkg.tar.zst`（Arch 安装包）
+- `hyps-hub-<版本>.tar.gz`（源码包）
+- `SHA256SUMS`
+
+```bash
+sudo pacman -U hyps-hub-0.1.0-1-x86_64.pkg.tar.zst
+```
+
+CI（Arch Linux 容器）会在每次推送到 `main` 时构建并运行 CTest；推送 `v*` 标签时自动构建安装包并创建 GitHub Release。
+
+## 5. Arch Linux 手工打包
 
 `packaging/PKGBUILD` 使用本地源码包 `hyps-hub-<版本>.tar.gz`。发版时也可以改成上游 tarball/源码地址。
 
@@ -70,7 +84,7 @@ sudo pacman -U hyps-hub-0.1.0-1-x86_64.pkg.tar.zst
 - 用户配置、Hyps 组件、日志不会被安装到系统目录；运行时才在 XDG 目录中创建。
 - 卸载包不会删除用户数据。
 
-## 5. 卸载
+## 6. 卸载
 
 ### 包管理器
 
@@ -92,7 +106,7 @@ sudo pacman -Rns hyps-hub
 
 如需彻底清理，请确认不再需要这些数据后手动删除上述目录。
 
-## 6. 首次启动
+## 7. 首次启动
 
 1. 向导会检查 Git、Bash、数据目录与网络。
 2. 点击「开始初始化」后，会把上游 `https://github.com/MoYingJi/Hyps.git` 克隆到
@@ -102,7 +116,7 @@ sudo pacman -Rns hyps-hub
 
 整个过程不会读取、修改、移动或清理 `~/Hyps`。
 
-## 7. 构建可复现性
+## 8. 构建可复现性
 
 - 版本号来自 CMake 的 `project(HypsHub VERSION ...)`。
 - 构建信息（Git commit）由 CMake 在配置时读取仓库 HEAD；无 Git 仓库时显示 `unknown`。

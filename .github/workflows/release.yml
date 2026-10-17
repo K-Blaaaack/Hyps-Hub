@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build Arch package
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel cmake ninja git \
+            qt6-base qt6-declarative qt6-svg
+
+      - name: Prepare builder
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/builder
+
+      - name: Build package and release assets
+        run: |
+          set -euo pipefail
+          pkgver="$(sed -n 's/^pkgver=//p' packaging/PKGBUILD | head -n1)"
+          if [ "v${pkgver}" != "${GITHUB_REF_NAME}" ]; then
+            echo "标签 ${GITHUB_REF_NAME} 与 PKGBUILD pkgver=${pkgver} 不一致" >&2
+            exit 1
+          fi
+
+          git archive --prefix="hyps-hub-${pkgver}/" \
+            -o "hyps-hub-${pkgver}.tar.gz" HEAD
+
+          mkdir -p pkgbuild dist
+          cp packaging/PKGBUILD "hyps-hub-${pkgver}.tar.gz" pkgbuild/
+          chown -R builder pkgbuild
+
+          su builder -s /bin/bash -c "cd '$PWD/pkgbuild' && makepkg -f --noconfirm"
+
+          cp "pkgbuild/hyps-hub-${pkgver}-1-x86_64.pkg.tar.zst" dist/
+          cp "hyps-hub-${pkgver}.tar.gz" dist/
+          (cd dist && sha256sum ./* > SHA256SUMS && cat SHA256SUMS)
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
