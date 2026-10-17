@@ -30,6 +30,13 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 | --- | --- | --- |
 | ![初始化](docs/screenshots/onboarding.png) | ![游戏](docs/screenshots/games.png) | ![关于](docs/screenshots/about.png) |
 
+### 添加游戏配置
+
+`TEMPLATE` 表示隔离的 `CONFIG_DIR/games/` 里还没有该游戏的配置；点击「创建」会从上游
+`config/games.examples` 复制一份，不覆盖已有配置，也不读取或修改 `~/Hyps`。
+
+<img src="docs/screenshots/add-game.png" alt="添加游戏配置" width="720">
+
 ## 依赖
 
 运行时：

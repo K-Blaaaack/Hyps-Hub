@@ -59,6 +59,7 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 - `docs/screenshots/games.png`：已配置游戏、示例路径警告、`game.exe`/`runner.name`/`game.args` 编辑、
   高级参数、原始编辑器入口。
 - `docs/screenshots/about.png`：独立关于页（构建/系统/组件/许可/数据位置）。
+- `docs/screenshots/add-game.png`：从上游示例模板创建游戏配置（隔离 CONFIG_DIR，不覆盖已有配置）。
 
 QML 加载无警告（`tst_smoke`、截图运行均无 QML 警告）。设计规范中的 0 圆角、45° 切角、单强边、
 微标签、噪点/网格/警戒线纹理、44px 主按钮均已落地；未使用任何鹰角专有美术资产。
