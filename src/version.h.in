@@ -1,0 +1,7 @@
+#pragma once
+
+// 由 CMake 配置生成，请勿直接修改。
+#define HYPS_HUB_VERSION "@PROJECT_VERSION@"
+#define HYPS_HUB_GIT_COMMIT "@HYPS_HUB_GIT_COMMIT@"
+#define HYPS_HUB_UPSTREAM_URL "https://github.com/MoYingJi/Hyps"
+#define HYPS_HUB_UPSTREAM_GIT_URL "https://github.com/MoYingJi/Hyps.git"

@@ -15,7 +15,6 @@ CMakeUserPresets.json
 
 # 打包产物
 /pkg/
-/src/
 *.pkg.tar.zst
 *.tar.gz
 
