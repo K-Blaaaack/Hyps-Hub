@@ -20,14 +20,15 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      # 先安装依赖（含 git），否则 checkout 会退化为下载压缩包、没有 .git
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
             base-devel cmake ninja git \
             qt6-base qt6-declarative qt6-svg
+
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Configure
         run: |

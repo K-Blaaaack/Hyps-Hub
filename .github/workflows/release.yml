@@ -19,14 +19,15 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      # 先安装依赖（含 git），确保 checkout 创建真正的 .git，供 git archive 使用
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
             base-devel cmake ninja git \
             qt6-base qt6-declarative qt6-svg
+
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Prepare builder
         run: |
@@ -56,7 +57,7 @@ jobs:
           (cd dist && sha256sum ./* > SHA256SUMS && cat SHA256SUMS)
 
       - name: Upload release assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-assets
           path: dist/*
@@ -70,13 +71,13 @@ jobs:
       contents: write
     steps:
       - name: Download assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-assets
           path: dist
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
