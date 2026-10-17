@@ -31,6 +31,7 @@ jobs:
 
       - name: Prepare builder
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/builder
 
