@@ -23,7 +23,7 @@ struct TaskContext
 {
     ProcessRunner *runner = nullptr;
     QFile logFile;
-    QString partial[2];
+    QString partial[3];
     bool finished = false;
 };
 
@@ -424,29 +424,33 @@ void TaskManager::writeStream(Task *task, int stream, const QString &chunk)
     if (!context || !context->logFile.isOpen()) {
         return;
     }
-    const int index = (stream == LogModel::Stderr) ? 1 : 0;
+    const int index = (stream == LogModel::Stderr) ? 1
+                     : (stream == LogModel::System ? 2 : 0);
     const bool isSystem = (stream == LogModel::System);
     context->partial[index] += chunk;
 
     QTextStream streamWriter(&context->logFile);
     streamWriter.setEncoding(QStringConverter::Utf8);
 
+    const QString prefix = isSystem ? QStringLiteral("[sys] ")
+                                    : (stream == LogModel::Stderr ? QStringLiteral("[err] ")
+                                                                  : QStringLiteral("[out] "));
     QString &buffer = context->partial[index];
     int start = 0;
     for (int i = 0; i < buffer.size(); ++i) {
         const QChar ch = buffer.at(i);
         if (ch == QLatin1Char('\n') || ch == QLatin1Char('\r')) {
             if (i > start) {
-                const QString prefix = isSystem ? QStringLiteral("[sys] ")
-                                               : (stream == LogModel::Stderr
-                                                          ? QStringLiteral("[err] ")
-                                                          : QStringLiteral("[out] "));
                 streamWriter << prefix << buffer.mid(start, i - start) << "\n";
             }
             start = i + 1;
         }
     }
     buffer = buffer.mid(start);
+    if (buffer.size() > 64 * 1024) {
+        streamWriter << prefix << buffer.left(64 * 1024) << QStringLiteral(" …[行已截断]\n");
+        buffer.clear();
+    }
     streamWriter.flush();
 }
 
@@ -456,8 +460,9 @@ void TaskManager::flushStreams(Task *task)
     if (!context) {
         return;
     }
-    for (int stream : {LogModel::Stdout, LogModel::Stderr}) {
-        const int index = (stream == LogModel::Stderr) ? 1 : 0;
+    for (int stream : {LogModel::Stdout, LogModel::Stderr, LogModel::System}) {
+        const int index = (stream == LogModel::Stderr) ? 1
+                         : (stream == LogModel::System ? 2 : 0);
         if (!context->partial[index].isEmpty()) {
             writeStream(task, stream, QStringLiteral("\n"));
         }
@@ -500,6 +505,7 @@ void TaskManager::finalizeTask(Task *task,
         task->log()->appendLine(tr("任务已结束：%1").arg(task->stateText()), LogModel::System);
     }
     appendHistory(*task);
+    pruneTaskLogs(200);
     emit taskFinished(task);
     emit activeCountChanged();
     emit recentTasksChanged();
@@ -537,16 +543,19 @@ Task *TaskManager::taskById(const QString &taskId) const
 
 void TaskManager::setCurrentTask(Task *task)
 {
-    if (m_currentTask == task && !(task && !task->active()
-                                   && task->log()->totalCount() == 0)) {
+    if (m_currentTask == task) {
         return;
     }
     m_currentTask = task;
     emit currentTaskChanged();
+    // 不在启动/切换时读日志：由任务页显式调用 loadCurrentLog() 或 select()，
+    // 避免大日志在 QML 窗口出现前阻塞主线程。
+}
 
-    // 历史任务在重启后没有内存日志，切换时按需从磁盘载入，避免日志页空白。
-    if (task && !task->active() && task->log()->totalCount() == 0) {
-        loadLogInto(task);
+void TaskManager::loadCurrentLog()
+{
+    if (m_currentTask) {
+        loadLogInto(m_currentTask);
     }
 }
 
@@ -628,6 +637,11 @@ void TaskManager::clearFinishedHistory()
         if (m_currentTask == task) {
             m_currentTask = nullptr;
         }
+        // 只删除本应用任务日志目录内的文件，历史文件被篡改时不得删除任意路径。
+        const QString logPath = task->logPath();
+        if (logPath.startsWith(m_paths->tasksLogDir() + QLatin1Char('/'))) {
+            QFile::remove(logPath);
+        }
         task->deleteLater();
     }
     if (!m_currentTask && m_model->rowCount() > 0) {
@@ -652,12 +666,41 @@ void TaskManager::loadLogInto(Task *task)
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return;
     }
-    QTextStream stream(&file);
-    stream.setEncoding(QStringConverter::Utf8);
-    while (!stream.atEnd()) {
-        const QString line = stream.readLine();
+
+    // 只读尾部：完整游戏日志可能达到数百 MB，启动/切换任务时不能全量读入。
+    constexpr qint64 maxTailBytes = 2 * 1024 * 1024;
+    constexpr int maxTailLines = 5000;
+    constexpr int maxLineChars = 32 * 1024;
+    const qint64 fileSize = file.size();
+    const qint64 startOffset = qMax<qint64>(0, fileSize - maxTailBytes);
+    if (startOffset > 0) {
+        file.seek(startOffset);
+    }
+    QByteArray tail = file.readAll();
+    const bool truncatedFile = startOffset > 0;
+    if (truncatedFile) {
+        const int firstNewline = tail.indexOf('\n');
+        if (firstNewline >= 0) {
+            tail.remove(0, firstNewline + 1);
+        } else {
+            tail.clear();
+        }
+        task->log()->appendLine(
+                tr("日志较大，仅载入最后 %1 MB；完整内容保留在磁盘日志中。")
+                        .arg(maxTailBytes / (1024 * 1024)),
+                LogModel::System);
+    }
+
+    const QStringList lines = QString::fromUtf8(tail).split(QLatin1Char('\n'),
+                                                            Qt::SkipEmptyParts);
+    const int firstLine = qMax(0, static_cast<int>(lines.size()) - maxTailLines);
+    for (int i = firstLine; i < lines.size(); ++i) {
+        QString line = lines.at(i);
         if (line.startsWith(QLatin1Char('#'))) {
             continue;
+        }
+        if (line.size() > maxLineChars) {
+            line = line.left(maxLineChars) + QStringLiteral(" …[行已截断]");
         }
         if (line.startsWith(QLatin1String("[out] "))) {
             task->log()->appendLine(line.mid(6), LogModel::Stdout);
@@ -696,6 +739,19 @@ void TaskManager::appendHistory(const Task &task)
     file.write("\n");
     file.close();
     trimHistoryFile();
+}
+
+void TaskManager::pruneTaskLogs(int keep)
+{
+    const QDir dir(m_paths->tasksLogDir());
+    if (!dir.exists()) {
+        return;
+    }
+    QFileInfoList logs = dir.entryInfoList({QStringLiteral("*.log")}, QDir::Files, QDir::Time);
+    while (logs.size() > keep) {
+        const QFileInfo oldest = logs.takeLast();
+        QFile::remove(oldest.absoluteFilePath());
+    }
 }
 
 void TaskManager::trimHistoryFile()

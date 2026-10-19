@@ -105,6 +105,7 @@ public:
     Task *run(const TaskSpec &spec);
 
     Q_INVOKABLE void select(const QString &taskId);
+    Q_INVOKABLE void loadCurrentLog();
     Q_INVOKABLE void cancelTask(const QString &taskId);
     Q_INVOKABLE void cancelActive();
     Q_INVOKABLE void clearFinishedHistory();
@@ -135,6 +136,7 @@ private:
     void loadHistory();
     void appendHistory(const Task &task);
     void trimHistoryFile();
+    void pruneTaskLogs(int keep);
     void pruneHistoryModel();
     void removeContext(const QString &taskId);
     void setLastError(const QString &message);

@@ -38,11 +38,6 @@ QString readOsPrettyName()
     return pretty.isEmpty() ? QSysInfo::productType() : pretty;
 }
 
-QString envValue(const QProcessEnvironment &environment, const QString &name)
-{
-    return environment.value(name);
-}
-
 } // namespace
 
 AppPaths::AppPaths(QObject *parent)

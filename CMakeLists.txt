@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 project(HypsHub
     VERSION 0.1.7
     DESCRIPTION "Hyps Hub - a native Linux desktop client for the Hyps CLI"
-    HOMEPAGE_URL "https://github.com/MoYingJi/Hyps"
+    HOMEPAGE_URL "https://github.com/K-Blaaaack/Hyps-Hub"
     LANGUAGES CXX
 )
 
@@ -14,7 +14,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(GNUInstallDirs)
 include(CTest)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Quick Qml QuickControls2 Svg DBus)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Qt 6 的 Q_OBJECT/moc 头在 GCC 16 触发该警告，不是项目代码问题。
+    add_compile_options(-Wno-sfinae-incomplete)
+endif()
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Quick Qml QuickControls2 Svg DBus Widgets)
 
 qt_standard_project_setup()
 
@@ -22,7 +30,11 @@ qt_standard_project_setup()
 # 版本信息
 # ---------------------------------------------------------------------------
 set(HYPS_HUB_GIT_COMMIT "unknown")
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+if(DEFINED ENV{HYPS_HUB_GIT_COMMIT}
+   AND NOT "$ENV{HYPS_HUB_GIT_COMMIT}" STREQUAL "")
+    # Release 从 git archive 的源码 tar 构建，没有 .git；工作流传入 GITHUB_SHA。
+    set(HYPS_HUB_GIT_COMMIT "$ENV{HYPS_HUB_GIT_COMMIT}")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
     find_package(Git QUIET)
     if(GIT_FOUND)
         execute_process(
@@ -118,7 +130,7 @@ target_link_libraries(hyps-hub-core PUBLIC
 )
 
 qt_add_executable(hyps-hub src/main.cpp)
-target_link_libraries(hyps-hub PRIVATE hyps-hub-core)
+target_link_libraries(hyps-hub PRIVATE hyps-hub-core Qt6::Widgets)
 
 # ---------------------------------------------------------------------------
 # QML 与资源

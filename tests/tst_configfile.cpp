@@ -103,7 +103,9 @@ void TestConfigFile::saveCreatesBackup()
     const QString path = copyFixture(dir, QStringLiteral("upstream-common.conf"));
     const QByteArray original = [&]() {
         QFile f(path);
-        f.open(QIODevice::ReadOnly);
+        if (!f.open(QIODevice::ReadOnly)) {
+            return QByteArray();
+        }
         return f.readAll();
     }();
 

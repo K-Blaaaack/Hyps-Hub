@@ -17,6 +17,7 @@ class TestDiagnostics : public QObject
 
 private slots:
     void exportsRedactedBundle();
+    void exportsOnlyTailOfLargeTaskLog();
 };
 
 void TestDiagnostics::exportsRedactedBundle()
@@ -44,7 +45,12 @@ void TestDiagnostics::exportsRedactedBundle()
     {
         QFile log(logPath);
         QVERIFY(log.open(QIODevice::WriteOnly | QIODevice::Text));
-        log.write("# Hyps Hub 任务日志\n[out] hello\n[err] TOKEN=supersecret-value\n");
+        log.write("# Hyps Hub 任务日志\n[out] hello\n"
+                  "[err] TOKEN=supersecret-value\n"
+                  "[err] Authorization: Bearer bearer-secret\n"
+                  "[err] --token cli-token-secret\n"
+                  "[err] api_key: \"quoted secret value\"\n"
+                  "[err] https://bob:url-pass@example.invalid/repo\n");
     }
     {
         QFile history(paths.taskHistoryFile());
@@ -77,6 +83,10 @@ void TestDiagnostics::exportsRedactedBundle()
     QVERIFY(logText.contains(QStringLiteral("hello")));
     QVERIFY(logText.contains(QStringLiteral("***")));
     QVERIFY(!logText.contains(QStringLiteral("supersecret-value")));
+    QVERIFY(!logText.contains(QStringLiteral("bearer-secret")));
+    QVERIFY(!logText.contains(QStringLiteral("cli-token-secret")));
+    QVERIFY(!logText.contains(QStringLiteral("quoted secret value")));
+    QVERIFY(!logText.contains(QStringLiteral("url-pass")));
 
     QFile runtimeLogFile(bundle + QStringLiteral("/logs/runtime.log"));
     QVERIFY(runtimeLogFile.open(QIODevice::ReadOnly | QIODevice::Text));
@@ -93,6 +103,45 @@ void TestDiagnostics::exportsRedactedBundle()
     const QString summaryText = QString::fromUtf8(summary.readAll());
     QVERIFY(summaryText.contains(QString::fromLatin1(HYPS_HUB_VERSION)));
     QVERIFY(summaryText.contains(paths.dataDir()));
+}
+
+void TestDiagnostics::exportsOnlyTailOfLargeTaskLog()
+{
+    QTemporaryDir root;
+    QVERIFY(root.isValid());
+
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert(QStringLiteral("HYPS_HUB_DATA_DIR"), root.filePath(QStringLiteral("data")));
+    env.insert(QStringLiteral("HYPS_HUB_CONFIG_DIR"), root.filePath(QStringLiteral("config")));
+    env.insert(QStringLiteral("HYPS_HUB_STATE_DIR"), root.filePath(QStringLiteral("state")));
+
+    AppPaths paths(env);
+    RuntimeManager runtime(&paths);
+    EnvironmentReport report;
+    report.parse(QStringLiteral("必需项: 1/1 通过\n"));
+    TaskManager tasks(&paths);
+    AppSettings settings(paths.guiConfigFile());
+    settings.load();
+
+    QDir().mkpath(paths.tasksLogDir());
+    QFile log(paths.tasksLogDir() + QStringLiteral("/large.log"));
+    QVERIFY(log.open(QIODevice::WriteOnly | QIODevice::Text));
+    log.write("[out] START-MARKER\n");
+    log.write(QByteArray(1024 * 1024, 'x'));
+    log.write("\n[out] END-MARKER\n");
+    log.close();
+
+    Diagnostics diagnostics(&paths, &runtime, &report, &tasks, &settings);
+    const QVariantMap result = diagnostics.exportBundle(root.filePath(QStringLiteral("export")));
+    QVERIFY2(result.value(QStringLiteral("ok")).toBool(),
+             qPrintable(result.value(QStringLiteral("error")).toString()));
+
+    const QString bundle = result.value(QStringLiteral("path")).toString();
+    QFile exported(bundle + QStringLiteral("/logs/tasks/large.log"));
+    QVERIFY(exported.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QString text = QString::fromUtf8(exported.readAll());
+    QVERIFY(text.contains(QStringLiteral("END-MARKER")));
+    QVERIFY(!text.contains(QStringLiteral("START-MARKER")));
 }
 
 QTEST_GUILESS_MAIN(TestDiagnostics)

@@ -181,9 +181,11 @@ void GameCatalog::buildGames()
 
     const QFileInfoList files = gamesDir.entryInfoList({QStringLiteral("*.conf")}, QDir::Files,
                                                        QDir::Name);
+    static const QRegularExpression validSlug(QStringLiteral("^[a-z0-9_-]+$"));
     for (const QFileInfo &file : files) {
         const QString slug = file.completeBaseName();
-        if (slug == QLatin1String("_common") || slug.isEmpty()) {
+        if (slug == QLatin1String("_common") || slug.isEmpty()
+            || !validSlug.match(slug).hasMatch()) {
             continue;
         }
 

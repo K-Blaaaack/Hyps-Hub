@@ -109,6 +109,7 @@ Item {
 
         ToggleSwitch {
             checked: root.checked
+            accessibleName: root.title
             onToggled: function (value) {
                 if (root.config) {
                     root.config.setValue(root.configKey, value ? "true" : "false");

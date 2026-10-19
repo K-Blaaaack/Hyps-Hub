@@ -180,9 +180,12 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 
 - 所有 CLI 调用都经过 `HypsAdapter`，使用程序 + 参数数组，不经过 shell，不提供任意命令执行器。
 - 更新仅在 Git 工作区干净时执行 `fetch` + `merge --ff-only`；从不执行 `reset --hard` / `clean`。
+- Git 子进程使用净化后的环境，禁用仓库/全局钩子，并把 `origin` 固定到编译期上游。
 - 克隆失败只清理本次创建的 `runtime/.Hyps.clone-*` 临时目录。
-- 诊断导出会对 `token/password/secret/api_key/auth` 字段脱敏。
-- 默认不使用 root；上游 CLI 本身也会拒绝 root。
+- 诊断导出对常见 `Authorization: Bearer`、`--token/--password`、JSON/引号值和 URL 凭据脱敏；仍建议分享前自行检查。
+- 同一 `XDG_STATE_HOME` 只允许一个实例，避免并发覆盖配置、任务历史或组件更新。
+- 关闭窗口时检查运行任务和未保存配置；原始编辑器关闭时也会确认放弃修改。
+- 默认拒绝 root；上游 CLI 本身也会拒绝 root。调试可用 `--allow-root` 显式覆盖。
 
 ## 开发
 
@@ -199,6 +202,10 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 
 - 上游没有游戏库扫描、自动下载/安装游戏或 Proton 的能力，Hyps Hub 也不会伪造这些功能。
 - 游戏启动的真实性依赖用户已安装的游戏与 Proton/umu 环境；自动化测试使用假 Hyps 组件验证适配层，不启动真实游戏。
+- 游戏/Proton 进程继承真实 `HOME` 与用户会话环境；本项目隔离 CLI 的 CONFIG/CACHE/DATA/TEMP，不是文件系统沙箱。
+- 诊断导出在主线程执行；单个日志最多读取尾部 512 KiB、最多 10 个任务日志，但仍可能造成短暂 UI 停顿。
+- 可访问性已补键盘导航与角色，但尚未做完整 WCAG/屏幕阅读器认证。
+- 任务日志保留最近 200 个；清空历史会同时删除对应任务日志。运行日志按 2 MiB 轮转，更新历史保留最近 200 条。
 - 更新使用 Git 快进合并；如果本地 Hyps 组件存在未提交修改，GUI 会拒绝更新，需要用户手动处理。
 - 未提供 Flatpak/AppImage：沙箱对宿主机 GPU/游戏环境有实际限制，不做未验证的交付。
 - 未实现 P1/P2 的配置导入导出、桌面通知的细粒度设置、多运行环境模板等，详见架构文档。

@@ -22,6 +22,8 @@ hyps_add_test(tst_gamecatalog)
 hyps_add_test(tst_runtimemanager)
 hyps_add_test(tst_hypsadapter)
 hyps_add_test(tst_diagnostics)
+hyps_add_test(tst_taskmanager)
+hyps_add_test(tst_configmanager)
 
 # 需要网络的真实克隆/CLI 调用：默认跳过，设置 HYPS_HUB_RUN_NETWORK_TESTS=1 后运行
 hyps_add_test(tst_network_e2e)
@@ -29,7 +31,7 @@ set_tests_properties(tst_network_e2e PROPERTIES DISABLED TRUE)
 
 # QML 启动冒烟测试（真实进程）
 add_test(NAME tst_smoke
-    COMMAND $<TARGET_FILE:hyps-hub> --smoke-test
+    COMMAND $<TARGET_FILE:hyps-hub> --smoke-test --allow-root
 )
 set_tests_properties(tst_smoke PROPERTIES
     ENVIRONMENT "TMPDIR=${CMAKE_CURRENT_BINARY_DIR}/tmp;QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;GSETTINGS_BACKEND=memory;HYPS_HUB_DATA_DIR=${CMAKE_CURRENT_BINARY_DIR}/smoke-data;HYPS_HUB_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/smoke-config;HYPS_HUB_STATE_DIR=${CMAKE_CURRENT_BINARY_DIR}/smoke-state"

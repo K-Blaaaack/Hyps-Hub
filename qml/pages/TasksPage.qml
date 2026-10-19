@@ -10,6 +10,9 @@ Item {
 
     property var host
 
+    Component.onCompleted: if (visible) Tasks.loadCurrentLog()
+    onVisibleChanged: if (visible) Tasks.loadCurrentLog()
+
     function taskStateKind(state) {
         if (state === "succeeded") return "state";
         if (state === "failed") return "danger";

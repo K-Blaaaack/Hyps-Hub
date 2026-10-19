@@ -16,19 +16,6 @@ namespace hyps {
 
 namespace {
 
-QString stripTail(const QString &text)
-{
-    const QStringList lines =
-            text.split(QRegularExpression(QStringLiteral("[\\r\\n]")), Qt::SkipEmptyParts);
-    for (auto it = lines.crbegin(); it != lines.crend(); ++it) {
-        const QString trimmed = it->trimmed();
-        if (!trimmed.isEmpty()) {
-            return trimmed;
-        }
-    }
-    return {};
-}
-
 } // namespace
 
 HypsAdapter::HypsAdapter(AppPaths *paths, RuntimeManager *runtime, TaskManager *tasks,
@@ -221,7 +208,7 @@ Task *HypsAdapter::initializeConfig()
 
 Task *HypsAdapter::createGameConfig(const QString &slug)
 {
-    static const QRegularExpression validSlug(QStringLiteral("^[a-z0-9_]+$"));
+    static const QRegularExpression validSlug(QStringLiteral("^[a-z0-9_-]+$"));
     if (!validSlug.match(slug).hasMatch()) {
         setLastError(tr("非法的游戏名：%1").arg(slug));
         return nullptr;

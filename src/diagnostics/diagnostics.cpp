@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -40,22 +41,84 @@ QString Diagnostics::defaultExportDirectory() const
 
 QString Diagnostics::redact(const QString &text) const
 {
-    static const QRegularExpression secretRe(
-            QStringLiteral("(token|password|passwd|secret|api[_-]?key|authorization|auth)"
-                           "([\\s\"']*[:=][\\s\"']*)([^\\s\"',]+)"),
-            QRegularExpression::CaseInsensitiveOption);
     QString result = text;
-    result.replace(secretRe, QStringLiteral("\\1\\2***"));
+
+    // 私钥块整体替换，避免只处理首行。
+    static const QRegularExpression privateKeyRe(
+            QStringLiteral("-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----"),
+            QRegularExpression::DotMatchesEverythingOption);
+    result.replace(privateKeyRe,
+                   QStringLiteral("-----BEGIN PRIVATE KEY-----***-----END PRIVATE KEY-----"));
+
+    // URL userinfo：https://user:password@host → https://user:***@host
+    static const QRegularExpression urlCredentialRe(
+            QStringLiteral("([A-Za-z][A-Za-z0-9+.-]*://)([^\\s/@:]+):([^\\s/@]+)@"));
+    result.replace(urlCredentialRe, QStringLiteral("\\1\\2:***@"));
+
+    // Authorization: Bearer / Basic / Digest / Token
+    static const QRegularExpression authorizationRe(
+            QStringLiteral("(?i)(\\bauthorization\\s*[:=]\\s*)"
+                           "(?:bearer|basic|digest|negotiate|token)?\\s*([^\\s,;\"']+)"));
+    result.replace(authorizationRe, QStringLiteral("\\1***"));
+
+    static const QString secretKey =
+            QStringLiteral("token|password|passwd|secret|api[-_]?key|authorization|auth|"
+                           "auth[-_]?token|access[-_]?token|refresh[-_]?token|"
+                           "client[-_]?secret|private[-_]?key");
+
+    // --token secret / --password=secret / --api-key "quoted secret"
+    static const QRegularExpression cliQuotedRe(
+            QStringLiteral("(?i)(--?(?:%1)(?:=|\\s+))([\"'])(.*?)(\\2)").arg(secretKey));
+    result.replace(cliQuotedRe, QStringLiteral("\\1\\2***\\4"));
+
+    static const QRegularExpression cliRe(
+            QStringLiteral("(?i)(--?(?:%1)(?:=|\\s+))([^\\s,;\"']+)").arg(secretKey));
+    result.replace(cliRe, QStringLiteral("\\1***"));
+
+    // key: "quoted value with spaces" / "key":"value"
+    static const QRegularExpression quotedValueRe(
+            QStringLiteral("(?i)(\\b(?:%1)\\b[\"']?\\s*[:=]\\s*)([\"'])(.*?)(\\2)")
+                    .arg(secretKey));
+    result.replace(quotedValueRe, QStringLiteral("\\1\\2***\\4"));
+
+    // key=value / key: value / JSON 简单值
+    static const QRegularExpression keyValueRe(
+            QStringLiteral("(?i)(\\b(?:%1|authorization)\\b\\s*[:=]\\s*)([^\\s,;\"']+)")
+                    .arg(secretKey));
+    result.replace(keyValueRe, QStringLiteral("\\1***"));
+
     return result;
 }
 
 QString Diagnostics::tailOfFile(const QString &path, int maxLines) const
 {
+    if (maxLines <= 0) {
+        return {};
+    }
+    const QFileInfo info(path);
+    if (!info.exists() || !info.isFile()) {
+        return {};
+    }
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return {};
     }
-    const QByteArray content = file.read(8 * 1024 * 1024);
+
+    constexpr qint64 maxTailBytes = 512 * 1024;
+    const qint64 startOffset = qMax<qint64>(0, info.size() - maxTailBytes);
+    if (startOffset > 0 && !file.seek(startOffset)) {
+        return {};
+    }
+    QByteArray content = file.readAll();
+    if (startOffset > 0) {
+        const int firstNewline = content.indexOf('\n');
+        if (firstNewline >= 0) {
+            content.remove(0, firstNewline + 1);
+        } else {
+            content.clear();
+        }
+    }
+
     const QStringList lines = QString::fromUtf8(content).split(QLatin1Char('\n'));
     const int start = qMax(0, static_cast<int>(lines.size()) - maxLines);
     return lines.mid(start).join(QLatin1Char('\n'));
@@ -66,14 +129,27 @@ bool Diagnostics::writeTextFile(const QString &directory, const QString &name,
 {
     const QString path = directory + QLatin1Char('/') + name;
     QDir().mkpath(QFileInfo(path).absolutePath());
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+    const QByteArray data = content.toUtf8();
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
         if (error) {
             *error = tr("无法写入 %1：%2").arg(path, file.errorString());
         }
         return false;
     }
-    file.write(content.toUtf8());
+    if (file.write(data) != data.size()) {
+        if (error) {
+            *error = tr("写入不完整 %1：%2").arg(path, file.errorString());
+        }
+        file.cancelWriting();
+        return false;
+    }
+    if (!file.commit()) {
+        if (error) {
+            *error = tr("提交失败 %1：%2").arg(path, file.errorString());
+        }
+        return false;
+    }
     return true;
 }
 

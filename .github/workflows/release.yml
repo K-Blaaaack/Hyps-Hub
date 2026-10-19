@@ -46,12 +46,18 @@ jobs:
 
           git archive --prefix="hyps-hub-${pkgver}/" \
             -o "hyps-hub-${pkgver}.tar.gz" HEAD
+          srcsum="$(sha256sum "hyps-hub-${pkgver}.tar.gz" | cut -d' ' -f1)"
 
           mkdir -p pkgbuild dist
           cp packaging/PKGBUILD "hyps-hub-${pkgver}.tar.gz" pkgbuild/
+          # 发布包必须校验源码 tar；本地 PKGBUILD 的 SKIP 只用于开发构建。
+          sed -i "s/sha256sums=('SKIP')/sha256sums=('${srcsum}')/" pkgbuild/PKGBUILD
           chown -R builder pkgbuild
 
-          su builder -s /bin/bash -c "cd '$PWD/pkgbuild' && makepkg -f --noconfirm"
+          # git archive 不含 .git，显式把 tag 对应提交传给 CMake。
+          commit="${GITHUB_SHA:0:12}"
+          su builder -s /bin/bash -c \
+            "cd '$PWD/pkgbuild' && HYPS_HUB_GIT_COMMIT='${commit}' makepkg -f --noconfirm"
 
           cp "pkgbuild/hyps-hub-${pkgver}-1-x86_64.pkg.tar.zst" dist/
           cp "hyps-hub-${pkgver}.tar.gz" dist/

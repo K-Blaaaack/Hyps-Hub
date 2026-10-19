@@ -16,10 +16,13 @@
 #include "runtime/runtimemanager.h"
 #include "version.h"
 
+#include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QGuiApplication>
 #include <QIcon>
+#include <QLockFile>
+#include <QMessageBox>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -28,11 +31,13 @@
 #include <QTextStream>
 #include <QTimer>
 
+#include <unistd.h>
+
 using namespace hyps;
 
 int main(int argc, char *argv[])
 {
-    QGuiApplication application(argc, argv);
+    QApplication application(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("hyps-hub"));
     QCoreApplication::setApplicationVersion(QStringLiteral(HYPS_HUB_VERSION));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Hyps Hub"));
@@ -58,7 +63,19 @@ int main(int argc, char *argv[])
             QStringLiteral("打开指定 objectName 的 QML 弹窗（用于截图/调试）"),
             QStringLiteral("objectName"));
     parser.addOption(previewDialogOption);
+    QCommandLineOption allowRootOption(
+            QStringLiteral("allow-root"),
+            QStringLiteral("允许以 root 运行（默认拒绝；上游 Hyps 会拒绝 root 启动游戏）"));
+    parser.addOption(allowRootOption);
     parser.process(application);
+
+    if (::geteuid() == 0 && !parser.isSet(allowRootOption)) {
+        QMessageBox::critical(
+                nullptr, QStringLiteral("Hyps Hub"),
+                QStringLiteral("不应以 root 运行 Hyps Hub。\n\n"
+                               "请改用普通用户账号。若确实需要调试，可显式加 --allow-root。"));
+        return 1;
+    }
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/hyps-hub.svg")));
@@ -67,6 +84,21 @@ int main(int argc, char *argv[])
     QString directoryError;
     if (!paths.ensureBaseDirectories(&directoryError)) {
         QTextStream(stderr) << "无法创建应用目录：" << directoryError << '\n';
+        QMessageBox::critical(nullptr, QStringLiteral("Hyps Hub"),
+                              QStringLiteral("无法创建应用目录：\n%1").arg(directoryError));
+        return 1;
+    }
+
+    // 单实例锁：防止两个进程同时改配置、写任务历史或更新 Hyps 组件。
+    QLockFile instanceLock(paths.stateDir() + QStringLiteral("/hyps-hub.lock"));
+    instanceLock.setStaleLockTime(30000);
+    if (!instanceLock.tryLock(100)) {
+        QTextStream(stderr) << "Hyps Hub 已在运行，拒绝启动第二个实例。\n";
+        QMessageBox::information(
+                nullptr, QStringLiteral("Hyps Hub"),
+                QStringLiteral("Hyps Hub 已在运行。\n\n"
+                               "为避免同时修改配置或更新 Hyps 组件，第二个实例不会启动。"));
+        return 2;
     }
 
     AppSettings settings(paths.guiConfigFile());
@@ -149,6 +181,11 @@ int main(int argc, char *argv[])
                      });
 
     QQmlApplicationEngine engine;
+    // 截图模式使用离屏平台；其屏幕尺寸通常只有 800×800，不能按真实屏幕裁剪，
+    // 否则 README 的 1440×900 截图会被缩小。
+    engine.rootContext()->setContextProperty(
+            QStringLiteral("hypsScreenshotMode"),
+            QVariant(parser.isSet(screenshotOption)));
     QObject::connect(&engine, &QQmlEngine::warnings, &application,
                      [](const QList<QQmlError> &warnings) {
                          for (const QQmlError &warning : warnings) {

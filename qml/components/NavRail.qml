@@ -65,7 +65,11 @@ Rectangle {
                 id: navItem
                 width: root.width
                 height: 72
+                activeFocusOnTab: true
                 readonly property bool active: root.currentPage === modelData.id
+
+                Keys.onReturnPressed: root.navigate(modelData.id)
+                Keys.onSpacePressed: root.navigate(modelData.id)
 
                 Rectangle {
                     anchors.fill: parent
@@ -80,6 +84,14 @@ Rectangle {
                     height: 40
                     y: 14
                     color: Theme.colors.signal
+                }
+
+                Rectangle {
+                    visible: navItem.activeFocus
+                    anchors.fill: parent
+                    color: "transparent"
+                    border.width: 2
+                    border.color: Theme.colors.signal
                 }
 
                 Column {
@@ -117,11 +129,16 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.navigate(modelData.id)
+                    onClicked: {
+                        navItem.forceActiveFocus();
+                        root.navigate(modelData.id);
+                    }
                 }
 
                 Accessible.name: modelData.label
+                Accessible.description: modelData.english
                 Accessible.role: Accessible.PageTab
+                Accessible.focusable: true
             }
         }
     }

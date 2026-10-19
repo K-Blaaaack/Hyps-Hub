@@ -290,7 +290,7 @@ ConfigFile *ConfigManager::runnerConfig(const QString &name)
 
 ConfigFile *ConfigManager::gameConfig(const QString &slug)
 {
-    static const QRegularExpression validSlug(QStringLiteral("^[a-z0-9_]+$"));
+    static const QRegularExpression validSlug(QStringLiteral("^[a-z0-9_-]+$"));
     if (!validSlug.match(slug).hasMatch()) {
         return nullptr;
     }
@@ -461,6 +461,24 @@ QVariantMap ConfigManager::runnerDetails(const QString &name) const
 bool ConfigManager::runnerExists(const QString &name) const
 {
     return m_runnerNames.contains(name);
+}
+
+bool ConfigManager::hasUnsavedChanges() const
+{
+    if (m_common && m_common->dirty()) {
+        return true;
+    }
+    for (const ConfigFile *config : m_gameConfigs) {
+        if (config && config->dirty()) {
+            return true;
+        }
+    }
+    for (const ConfigFile *config : m_runnerConfigs) {
+        if (config && config->dirty()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace hyps

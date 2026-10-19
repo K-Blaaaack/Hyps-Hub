@@ -71,6 +71,9 @@ Item {
 
             TextEdit {
                 id: edit
+                Accessible.name: "配置文本编辑器"
+                Accessible.role: Accessible.EditableText
+                Accessible.focusable: true
                 width: Math.max(flick.width, edit.contentWidth + leftPadding + rightPadding)
                 height: Math.max(flick.height, edit.contentHeight + topPadding + bottomPadding)
                 color: Theme.colors.paper2

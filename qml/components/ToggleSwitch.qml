@@ -6,11 +6,17 @@ Item {
     id: root
 
     property bool checked: false
+    property string accessibleName: "开关"
     signal toggled(bool value)
 
     implicitWidth: 44
     implicitHeight: 44
     activeFocusOnTab: true
+
+    Accessible.name: root.accessibleName
+    Accessible.role: Accessible.CheckBox
+    Accessible.checked: root.checked
+    Accessible.focusable: true
 
     Rectangle {
         anchors.centerIn: parent
@@ -48,8 +54,12 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.toggled(!root.checked)
+        onClicked: {
+            root.forceActiveFocus();
+            root.toggled(!root.checked);
+        }
     }
 
     Keys.onSpacePressed: root.toggled(!root.checked)
+    Keys.onReturnPressed: root.toggled(!root.checked)
 }

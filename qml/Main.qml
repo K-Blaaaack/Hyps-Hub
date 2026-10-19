@@ -18,6 +18,7 @@ ApplicationWindow {
     minimumHeight: 720
 
     property string currentPage: "home"
+    property bool quitHasUnsaved: false
 
     readonly property var pageDefs: [
         { id: "home", index: "01", label: "首页", english: "OVERVIEW", icon: "home" },
@@ -59,6 +60,7 @@ ApplicationWindow {
     }
 
     function confirmQuit() {
+        window.quitHasUnsaved = Configs.hasUnsavedChanges();
         quitDialog.open();
     }
 
@@ -69,16 +71,30 @@ ApplicationWindow {
 
     Component.onCompleted: {
         const geometry = Settings.windowGeometry();
-        if (geometry.width >= 640 && geometry.height >= 480) {
-            window.width = geometry.width;
-            window.height = geometry.height;
-        }
-        if (!App.wayland) {
-            if (geometry.x !== undefined) {
-                window.x = geometry.x;
+        if (hypsScreenshotMode) {
+            // 离屏平台通常报告 800×800；截图按配置尺寸渲染，不按虚拟屏幕裁剪。
+            window.width = geometry.width >= 640 ? geometry.width : 1440;
+            window.height = geometry.height >= 480 ? geometry.height : 900;
+        } else {
+            const maxWidth = Screen.desktopAvailableWidth > 0
+                           ? Screen.desktopAvailableWidth : window.minimumWidth;
+            const maxHeight = Screen.desktopAvailableHeight > 0
+                            ? Screen.desktopAvailableHeight : window.minimumHeight;
+            if (geometry.width >= 640 && geometry.height >= 480) {
+                window.width = Math.min(Math.max(geometry.width, window.minimumWidth), maxWidth);
+                window.height = Math.min(Math.max(geometry.height, window.minimumHeight), maxHeight);
             }
-            if (geometry.y !== undefined) {
-                window.y = geometry.y;
+            if (!App.wayland) {
+                const maxX = Math.max(0, maxWidth - 120);
+                const maxY = Math.max(0, maxHeight - 120);
+                if (typeof geometry.x === "number" && isFinite(geometry.x)
+                    && geometry.x >= 0 && geometry.x <= maxX) {
+                    window.x = geometry.x;
+                }
+                if (typeof geometry.y === "number" && isFinite(geometry.y)
+                    && geometry.y >= 0 && geometry.y <= maxY) {
+                    window.y = geometry.y;
+                }
             }
         }
         if (geometry.maximized) {
@@ -105,7 +121,8 @@ ApplicationWindow {
 
     onClosing: function (close) {
         window.saveGeometry();
-        if (Tasks.activeCount > 0) {
+        window.quitHasUnsaved = Configs.hasUnsavedChanges();
+        if (Tasks.activeCount > 0 || window.quitHasUnsaved) {
             close.accepted = false;
             quitDialog.open();
         }
@@ -230,9 +247,23 @@ ApplicationWindow {
 
     ConfirmDialog {
         id: quitDialog
-        title: "仍有任务正在运行"
-        message: "关闭窗口会取消所有运行中的任务（包括游戏启动），并向整个进程组发送终止信号。确定退出吗？"
-        confirmText: "取消任务并退出"
+        title: window.quitHasUnsaved && Tasks.activeCount > 0
+                   ? "有未保存的配置，且任务仍在运行"
+                   : (window.quitHasUnsaved ? "有未保存的配置" : "仍有任务正在运行")
+        message: {
+            const parts = [];
+            if (window.quitHasUnsaved) {
+                parts.push("有配置修改尚未保存，退出会丢失这些修改。");
+            }
+            if (Tasks.activeCount > 0) {
+                parts.push("关闭窗口会取消所有运行中的任务（包括游戏启动），并向整个进程组发送终止信号。");
+            }
+            parts.push("确定退出吗？");
+            return parts.join("\n\n");
+        }
+        confirmText: window.quitHasUnsaved && Tasks.activeCount > 0
+                         ? "取消任务、放弃修改并退出"
+                         : (window.quitHasUnsaved ? "放弃修改并退出" : "取消任务并退出")
         cancelText: "返回"
         danger: true
         onAccepted: window.quitNow()

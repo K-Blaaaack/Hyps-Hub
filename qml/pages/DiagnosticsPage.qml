@@ -14,6 +14,9 @@ Item {
     property bool networkCheckStarted: false
 
     function ensureNetworkCheck() {
+        if (!page.visible) {
+            return;
+        }
         if (!page.networkCheckStarted && Runtime.ready
             && Runtime.networkStatus === "idle") {
             page.networkCheckStarted = true;
@@ -21,11 +24,15 @@ Item {
         }
     }
 
-    Component.onCompleted: ensureNetworkCheck()
+    onVisibleChanged: if (visible) ensureNetworkCheck()
 
     Connections {
         target: Runtime
-        function onStateChanged() { page.ensureNetworkCheck(); }
+        function onStateChanged() {
+            if (page.visible) {
+                page.ensureNetworkCheck();
+            }
+        }
     }
 
     function runAction(actionId) {

@@ -21,7 +21,7 @@ class TaskManager;
  * 约束：
  *  - 使用参数数组调用 bash + 脚本，绝不经过 shell；
  *  - 注入隔离后的 CONFIG_DIR / CACHE_DIR / DATA_DIR / TEMP_DIR；
- *  - 启动脚本通过扫描 scripts/*.sh 的 GAME_NAME 发现，不硬编码文件名；
+ *  - 启动脚本通过扫描 scripts 目录的 .sh 脚本中的 GAME_NAME 发现，不硬编码文件名；
  *  - 诊断命令使用白名单，不提供任意命令执行器。
  */
 class HypsAdapter : public QObject

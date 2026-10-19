@@ -775,6 +775,9 @@ Item {
         onApplyRequested: function (text) {
             const result = Configs.common.applyRawText(text);
             page.refreshCommon();
+            if (result.ok) {
+                commonRawDialog.markApplied();
+            }
             page.host.showToast(result.ok
                                 ? "已应用到内存，保存后写入磁盘"
                                 : "无法应用：" + result.error);
@@ -802,6 +805,9 @@ Item {
             }
             const result = page.runnerCfg.applyRawText(text);
             page.refreshRunner();
+            if (result.ok) {
+                runnerRawDialog.markApplied();
+            }
             page.host.showToast(result.ok
                                 ? "已应用到内存，保存后写入磁盘"
                                 : "无法应用：" + result.error);

@@ -15,7 +15,7 @@ class RuntimeManager;
 
 /**
  * 游戏目录：从 Hyps 配置目录（CONFIG_DIR）读取已配置游戏，从 Hyps 组件的
- * games.examples 读取可添加的模板，并从 scripts/*.sh 的 GAME_NAME 发现启动脚本。
+ * games.examples 读取可添加的模板，并从 scripts 目录的 .sh 脚本中读取 GAME_NAME 发现启动脚本。
  *
  * 这里只做「配置层面的展示与校验」，真正的启动动作仍由 HypsAdapter 调用上游脚本。
  */

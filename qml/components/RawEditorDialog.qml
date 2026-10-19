@@ -20,10 +20,12 @@ Popup {
     signal applyRequested(string text)
     signal saveRequested(string text)
 
+    property bool edited: editor.text !== dialog.editorText
+
     modal: true
     focus: true
     padding: 24
-    closePolicy: Popup.CloseOnEscape
+    closePolicy: Popup.NoAutoClose
     width: Math.min(1200, Overlay.overlay ? Overlay.overlay.width - 100 : 1200)
     height: Math.min(780, Overlay.overlay ? Overlay.overlay.height - 120 : 780)
     anchors.centerIn: Overlay.overlay
@@ -45,6 +47,18 @@ Popup {
         return editor.text;
     }
 
+    function markApplied() {
+        editorText = editor.text;
+    }
+
+    function requestClose() {
+        if (dialog.edited && !dialog.readOnly) {
+            discardDialog.open();
+        } else {
+            close();
+        }
+    }
+
     onOpened: {
         editor.text = editorText;
         editor.forceActiveFocus();
@@ -52,8 +66,14 @@ Popup {
 
     Shortcut {
         sequence: "Ctrl+S"
-        enabled: dialog.visible && !dialog.readOnly
+        enabled: dialog.visible && !dialog.readOnly && !discardDialog.visible
         onActivated: dialog.saveRequested(editor.text)
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: dialog.visible && !discardDialog.visible
+        onActivated: dialog.requestClose()
     }
 
     contentItem: ColumnLayout {
@@ -151,8 +171,18 @@ Popup {
                 text: "关闭"
                 implicitHeight: 40
                 ghost: true
-                onClicked: dialog.close()
+                onClicked: dialog.requestClose()
             }
         }
+    }
+
+    ConfirmDialog {
+        id: discardDialog
+        title: "放弃未保存的编辑？"
+        message: "原始编辑器中有修改尚未应用。关闭会丢弃这些修改。"
+        confirmText: "放弃修改"
+        cancelText: "继续编辑"
+        danger: true
+        onAccepted: dialog.close()
     }
 }

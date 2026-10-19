@@ -35,11 +35,55 @@ QString tailLine(const QString &text)
     return {};
 }
 
-QProcessEnvironment gitEnvironment()
+QProcessEnvironment gitEnvironment(const QString &repositoryUrl)
 {
     QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
-    // 避免在网络/认证异常时卡在交互式凭据提示上。
+
+    // 不继承可能重定向仓库、凭据来源或执行命令的 Git 环境。
+    static const QStringList blocked = {
+        QStringLiteral("GIT_DIR"),
+        QStringLiteral("GIT_WORK_TREE"),
+        QStringLiteral("GIT_INDEX_FILE"),
+        QStringLiteral("GIT_OBJECT_DIRECTORY"),
+        QStringLiteral("GIT_ALTERNATE_OBJECT_DIRECTORIES"),
+        QStringLiteral("GIT_NAMESPACE"),
+        QStringLiteral("GIT_COMMON_DIR"),
+        QStringLiteral("GIT_CEILING_DIRECTORIES"),
+        QStringLiteral("GIT_DISCOVERY_ACROSS_FILESYSTEM"),
+        QStringLiteral("GIT_CONFIG"),
+        QStringLiteral("GIT_CONFIG_COUNT"),
+        QStringLiteral("GIT_CONFIG_GLOBAL"),
+        QStringLiteral("GIT_CONFIG_SYSTEM"),
+        QStringLiteral("GIT_CONFIG_NOSYSTEM"),
+        QStringLiteral("GIT_SSH"),
+        QStringLiteral("GIT_SSH_COMMAND"),
+        QStringLiteral("GIT_ASKPASS"),
+        QStringLiteral("GIT_EXEC_PATH"),
+        QStringLiteral("GIT_PROXY_COMMAND"),
+        QStringLiteral("GIT_EXTERNAL_DIFF"),
+        QStringLiteral("GIT_PAGER"),
+        QStringLiteral("GIT_EDITOR"),
+        QStringLiteral("GIT_SEQUENCE_EDITOR"),
+    };
+    for (const QString &key : environment.keys()) {
+        if (blocked.contains(key) || key.startsWith(QLatin1String("GIT_CONFIG_KEY_"))
+            || key.startsWith(QLatin1String("GIT_CONFIG_VALUE_"))) {
+            environment.remove(key);
+        }
+    }
+
+    // 避免在网络/认证异常时卡在交互式凭据提示上，并忽略全局/系统 Git 配置。
     environment.insert(QStringLiteral("GIT_TERMINAL_PROMPT"), QStringLiteral("0"));
+    environment.insert(QStringLiteral("GIT_CONFIG_NOSYSTEM"), QStringLiteral("1"));
+    environment.insert(QStringLiteral("GIT_CONFIG_GLOBAL"), QStringLiteral("/dev/null"));
+    environment.insert(QStringLiteral("GIT_CONFIG_SYSTEM"), QStringLiteral("/dev/null"));
+
+    // 禁止仓库钩子，并把 origin 固定到编译期上游，避免本地 .git/config 改写更新来源。
+    environment.insert(QStringLiteral("GIT_CONFIG_COUNT"), QStringLiteral("2"));
+    environment.insert(QStringLiteral("GIT_CONFIG_KEY_0"), QStringLiteral("core.hooksPath"));
+    environment.insert(QStringLiteral("GIT_CONFIG_VALUE_0"), QStringLiteral("/dev/null"));
+    environment.insert(QStringLiteral("GIT_CONFIG_KEY_1"), QStringLiteral("remote.origin.url"));
+    environment.insert(QStringLiteral("GIT_CONFIG_VALUE_1"), repositoryUrl);
     return environment;
 }
 
@@ -147,7 +191,13 @@ void RuntimeManager::appendRuntimeLogFile(const QString &line)
         return;
     }
     QDir().mkpath(m_paths->logsDir());
-    QFile file(m_paths->runtimeLogFile());
+    const QString path = m_paths->runtimeLogFile();
+    constexpr qint64 maxLogBytes = 2 * 1024 * 1024;
+    if (QFileInfo(path).size() > maxLogBytes) {
+        QFile::remove(path + QStringLiteral(".1"));
+        QFile::rename(path, path + QStringLiteral(".1"));
+    }
+    QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         return;
     }
@@ -217,12 +267,37 @@ void RuntimeManager::writeUpdateHistory(const QString &result, const QString &be
     object.insert(QStringLiteral("detail"), detail);
 
     QDir().mkpath(m_paths->stateDir());
-    QFile file(m_paths->updateHistoryFile());
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+    const QString path = m_paths->updateHistoryFile();
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+            return;
+        }
+        file.write(QJsonDocument(object).toJson(QJsonDocument::Compact));
+        file.write("\n");
+    }
+
+    // 更新历史只保留最近 200 条，避免长期运行无限增长。
+    QFile read(path);
+    if (!read.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return;
     }
-    file.write(QJsonDocument(object).toJson(QJsonDocument::Compact));
-    file.write("\n");
+    const QStringList lines =
+            QString::fromUtf8(read.readAll()).split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    read.close();
+    constexpr int keep = 200;
+    if (lines.size() <= keep) {
+        return;
+    }
+    QSaveFile out(path);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        return;
+    }
+    for (const QString &line : lines.mid(lines.size() - keep)) {
+        out.write(line.toUtf8());
+        out.write("\n");
+    }
+    out.commit();
 }
 
 bool RuntimeManager::verifyStructure(const QString &directory, QStringList *missing)
@@ -298,7 +373,8 @@ void RuntimeManager::runCommand(const QString &program, const QStringList &argum
                 }
             });
 
-    if (!runner->start(program, arguments, workingDirectory, gitEnvironment(), timeoutMs)) {
+    if (!runner->start(program, arguments, workingDirectory, gitEnvironment(m_repositoryUrl),
+                       timeoutMs)) {
         m_commandRunner = nullptr;
         runner->deleteLater();
         emit busyChanged();
@@ -344,7 +420,7 @@ void RuntimeManager::loadGitInfo(std::function<void(bool, QString)> done)
                runGit({QStringLiteral("rev-parse"), QStringLiteral("--abbrev-ref"),
                        QStringLiteral("HEAD")},
                       10000, {},
-                      [this, done](int branchCode, const QString &branchOut, const QString &err2,
+                      [this, done](int branchCode, const QString &branchOut, const QString &,
                                    bool canceled2) {
                           if (canceled2) {
                               done(false, tr("操作已取消"));
@@ -593,7 +669,7 @@ void RuntimeManager::startClone()
     if (!m_cloneRunner->start(m_gitProgram,
                               {QStringLiteral("clone"), QStringLiteral("--progress"),
                                m_repositoryUrl, tempPath},
-                              m_paths->runtimeRoot(), gitEnvironment(), 0)) {
+                              m_paths->runtimeRoot(), gitEnvironment(m_repositoryUrl), 0)) {
         appendLog(tr("无法启动 git clone"));
         cleanupCloneDirectory();
         setState(QStringLiteral("error"));

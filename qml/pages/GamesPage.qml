@@ -589,6 +589,7 @@ Item {
             const result = page.gameCfg.applyRawText(text);
             if (result.ok) {
                 page.refreshIssues();
+                rawEditorDialog.markApplied();
                 page.host.showToast("已应用到内存，保存后写入磁盘");
             } else {
                 page.host.showToast("无法应用：" + result.error);

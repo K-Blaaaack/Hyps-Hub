@@ -101,6 +101,12 @@ void LogModel::appendChunk(const QString &chunk, int stream)
         }
     }
     m_partial[index] = buffer.mid(start);
+    if (m_partial[index].size() > 64 * 1024) {
+        appendLine(m_partial[index].left(64 * 1024)
+                           + QStringLiteral(" …[行已截断]"),
+                   stream);
+        m_partial[index].clear();
+    }
 }
 
 void LogModel::appendLine(const QString &line, int stream)

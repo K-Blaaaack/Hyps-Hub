@@ -21,6 +21,15 @@ Item {
     signal clicked
 
     implicitHeight: 64
+    activeFocusOnTab: true
+
+    Keys.onReturnPressed: root.clicked()
+    Keys.onSpacePressed: root.clicked()
+
+    Accessible.name: root.label
+    Accessible.description: root.stateText
+    Accessible.role: Accessible.ListItem
+    Accessible.focusable: true
 
     function stateKind() {
         if (root.state === "succeeded") return "state";
@@ -113,6 +122,14 @@ Item {
     }
 
     Rectangle {
+        visible: root.activeFocus
+        anchors.fill: parent
+        color: "transparent"
+        border.width: 2
+        border.color: Theme.colors.signal
+    }
+
+    Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -126,6 +143,9 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked()
+        onClicked: {
+            root.forceActiveFocus();
+            root.clicked();
+        }
     }
 }

@@ -55,6 +55,7 @@ public:
     Q_INVOKABLE QVariantList validateRunner(const QString &name);
     Q_INVOKABLE QVariantMap runnerDetails(const QString &name) const;
     Q_INVOKABLE bool runnerExists(const QString &name) const;
+    Q_INVOKABLE bool hasUnsavedChanges() const;
 
 signals:
     void runnersChanged();

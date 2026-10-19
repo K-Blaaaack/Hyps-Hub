@@ -19,7 +19,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-结果：**9/9 通过**（`tst_network_e2e` 默认禁用）：
+结果：**11/11 通过**（`tst_network_e2e` 默认禁用）：
 
 | 测试 | 覆盖 | 结果 |
 | --- | --- | --- |
@@ -30,7 +30,9 @@ ctest --test-dir build --output-on-failure
 | `tst_runtimemanager` | 克隆成功/失败清理、目标存在不覆盖、网络检查、脏工作区拒绝更新、ff-only 更新、合并失败 | PASS |
 | `tst_hypsadapter` | 假组件：参数、隔离环境、启动脚本发现、环境检测、白名单 | PASS |
 | `tst_gamecatalog` | 已配置游戏、模板、缺失 exe/启动脚本状态 | PASS |
-| `tst_diagnostics` | 诊断包结构、密钥脱敏 | PASS |
+| `tst_diagnostics` | 诊断包结构、密钥/Authorization/URL 凭据脱敏、大日志尾部导出 | PASS |
+| `tst_taskmanager` | 历史日志懒加载、大日志尾部、清空历史删除任务日志 | PASS |
+| `tst_configmanager` | 连字符 slug、未保存配置检测 | PASS |
 | `tst_smoke` | 真实进程加载全部 QML 后退出 | PASS |
 
 ### 真实网络端到端测试
@@ -44,7 +46,7 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 - 从 `https://github.com/MoYingJi/Hyps.git` 克隆到临时 XDG 目录，提交 `72191b2`
   （`fix: 修正 runner 配置检查，允许省略 runner.exe`）。
 - 执行 `init.sh --no-game`，`CONFIG_DIR` 下生成 `_common.conf` 与运行器配置；
-  运行副本 `config/games/_common.conf` 不存在（证明隔离生效）。
+  Hyps 组件 `config/games/_common.conf` 不存在（证明隔离生效）。
 - 执行真实 `init.sh --check`：**必需项 10/10 通过，可选能力缺失 3 项，配置待创建 1 项**。
 - 执行真实 `scripts/_Hyps --help`：成功且输出包含子命令 `game`。
 - `runtime-info.json` 写入 `initializedAt`。
@@ -83,7 +85,7 @@ cmake --install build --prefix "$PWD/build/prefix"
 bin/hyps-hub
 share/applications/hyps-hub.desktop
 share/icons/hicolor/scalable/apps/hyps-hub.svg
-share/doc/hyps-hub/{README,install,troubleshooting,development,architecture,research,design}.md
+share/doc/hyps-hub/{README,install,troubleshooting,development,architecture,research,design,credits}.md
 share/licenses/hyps-hub/GPL-3.0-only.txt
 ```
 
