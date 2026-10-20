@@ -53,7 +53,7 @@ ctest --test-dir build --output-on-failure
 - `SHA256SUMS`
 
 ```bash
-sudo pacman -U hyps-hub-0.1.7-1-x86_64.pkg.tar.zst
+sudo pacman -U hyps-hub-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 CI（Arch Linux 容器）会在每次推送到 `main` 时构建并运行 CTest；推送 `v*` 标签时自动构建安装包并创建 GitHub Release。
@@ -64,18 +64,18 @@ CI（Arch Linux 容器）会在每次推送到 `main` 时构建并运行 CTest�
 
 ```bash
 # 1) 生成源码包（在仓库根目录）
-git archive --prefix=hyps-hub-0.1.7/ -o hyps-hub-0.1.7.tar.gz HEAD
+git archive --prefix=hyps-hub-0.2.0/ -o hyps-hub-0.2.0.tar.gz HEAD
 
 # 2) 准备打包目录
 mkdir -p /tmp/hyps-hub-pkg
-cp packaging/PKGBUILD hyps-hub-0.1.7.tar.gz /tmp/hyps-hub-pkg/
+cp packaging/PKGBUILD hyps-hub-0.2.0.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg
 
 # 3) 构建并打包（不安装）
 makepkg -f
 
 # 4) 安装
-sudo pacman -U hyps-hub-0.1.7-1-x86_64.pkg.tar.zst
+sudo pacman -U hyps-hub-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 注意：
