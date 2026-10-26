@@ -14,11 +14,16 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - **环境检测**：调用上游 `init.sh --check` 并解析真实报表（必需项/可选能力/配置状态）。
 - **游戏配置与启动**：读取 `CONFIG_DIR/games/*.conf`，可视化编辑 `game.exe`、`runner.name`、`game.args` 等；
   启动时调用上游 `scripts/<Game>.sh`，实时显示 stdout/stderr、退出码，可按进程组取消任务。
+- **终末地替身配置可视化**：游戏页按游戏动态加载字段，`endfield` 额外提供「终末地替身」分区
+  （`mode`、`launcher`、替身目录/目标、硬链接与复制目标、`keep`、`exit_after`、`show_info`），
+  `mode` 用枚举选择，保存前校验模式冲突与「同一前缀 `dir`/`target` 二选一」。
 - **配置管理**：通用配置（MangoHud、GameMode、缓存、taskset、Overlay、时长记录等）与运行器配置可视化编辑；
   保存前校验、自动 `.bak.<时间戳>` 备份、原始文本编辑器（保留注释与顺序）。
 - **任务与日志**：任务历史（最多 200 条）、逐任务日志落盘、过滤/复制/清空视图、退出时清理子进程。
 - **诊断**：环境报表、Hyps 组件状态、手动检查更新（`git fetch` + `git merge --ff-only`，脏工作区拒绝更新）、
   白名单诊断命令、脱敏诊断包导出。
+- **上游同步**：跟随上游 Hyps 的配置契约变化（0.3.0 基线 `a2ac842`）。上游移除的功能（如 hosts 断网）
+  同步下线，只对残留键告警；弃用键（如 `gi.fps_unlock.prog`）给出迁移提示而不改动用户配置。
 - **Ark 设计语言界面**：近黑墨底、单一青色信号、0 圆角、1px 细线、45° 切角、NN 索引与双纹理；
   跟随系统深浅色，支持手动切换。
 
@@ -50,6 +55,8 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 
 - 左侧列出 `CONFIG_DIR/games/*.conf` 中的已配置游戏，并标注就绪/警告状态。
 - 右侧可视化编辑 `game.exe`、`runner.name`、`game.args` 等字段；保存前校验，并自动生成 `.bak.<时间戳>` 备份。
+- 字段按游戏动态加载：`endfield` 会多出「终末地替身」分区（`mode`、`launcher`、替身目录/目标、
+  `hardlink_*`/`copy_*`、`keep`、`exit_after`、`show_info`），`mode` 为枚举选择，未启用时不生成替身。
 - 底部显示启动命令与隔离环境；只有配置完整且已保存时「启动游戏」才可用。
 - 启动通过上游 `scripts/<Game>.sh` 执行，实时输出进入「任务」页。
 
@@ -155,12 +162,25 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.2.0/ -o hyps-hub-0.2.0.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.2.0.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.3.0/ -o hyps-hub-0.3.0.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.3.0.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 
 详见 [docs/install.md](docs/install.md)。
+
+## 上游同步
+
+当前版本 **0.3.0**，对应上游 Hyps 提交 `a2ac842`（基线 `1b94dc8`）。
+
+| 上游变化 | Hyps Hub 处理 |
+| --- | --- |
+| `hosts_disconnect` 功能移除 | 通用配置不再提供该字段；旧配置残留键只告警，不删除、不迁移 |
+| 终末地替身配置重构（`endfield.surrogate.*`） | 游戏页新增「终末地替身」分区，并按上游语义校验模式冲突与目标互斥 |
+| `gi.fps_unlock.prog` 弃用 | 键仍可见可编辑，校验给出弃用提示（上游改为取 `game.exe` basename） |
+
+组件升级仍走快进合并（`git fetch` + `git merge --ff-only`），脏工作区拒绝更新。逐提交的变更、
+影响面与 GUI 适配明细见 [docs/upstream-sync-2026-10-27.md](docs/upstream-sync-2026-10-27.md)。
 
 ## 数据与隔离
 
@@ -195,6 +215,7 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 - [docs/architecture.md](docs/architecture.md) — 分层、目录、状态机、适配层
 - [docs/development.md](docs/development.md) — 构建、测试、调试
 - [docs/verification.md](docs/verification.md) — 构建、测试、打包与验收记录
+- [docs/upstream-sync-2026-10-27.md](docs/upstream-sync-2026-10-27.md) — 0.3.0 上游同步（`1b94dc8` → `a2ac842`）
 - [docs/troubleshooting.md](docs/troubleshooting.md) — 故障排查
 - [docs/design/](docs/design/) — Ark 设计语言参考（仅设计语言，不含鹰角专有资产）
 
@@ -207,6 +228,8 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 - 可访问性已补键盘导航与角色，但尚未做完整 WCAG/屏幕阅读器认证。
 - 任务日志保留最近 200 个；清空历史会同时删除对应任务日志。运行日志按 2 MiB 轮转，更新历史保留最近 200 条。
 - 更新使用 Git 快进合并；如果本地 Hyps 组件存在未提交修改，GUI 会拒绝更新，需要用户手动处理。
+- 上游已移除 hosts 断网功能，Hyps Hub 同步下线；旧配置里的 `features.hosts_disconnect.*` 残留键只告警，需自行清理。
+- 终末地替身模式由上游 C 工具实现，需要 `mingw-w64-gcc` 编译；`launcher` 模式还要求本机已安装官方启动器。
 - 未提供 Flatpak/AppImage：沙箱对宿主机 GPU/游戏环境有实际限制，不做未验证的交付。
 - 未实现 P1/P2 的配置导入导出、桌面通知的细粒度设置、多运行环境模板等，详见架构文档。
 

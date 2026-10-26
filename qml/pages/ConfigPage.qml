@@ -71,6 +71,17 @@ Item {
         return result;
     }
 
+    /* enum 字段的选项：runner 类型用运行器列表，其余读字段自带的 options */
+    function fieldOptions(field) {
+        if (!field) {
+            return [];
+        }
+        if (field.type === "runner") {
+            return Configs.runnerNames;
+        }
+        return field.options !== undefined && field.options !== null ? field.options : [];
+    }
+
     function selectRunner(name) {
         page.runnerName = name;
         page.refreshRunner();
@@ -348,7 +359,7 @@ Item {
                                         description: modelData.description
                                         hint: modelData.hint
                                         type: modelData.type
-                                        options: Configs.runnerNames
+                                        options: page.fieldOptions(modelData)
                                     }
                                 }
                             }

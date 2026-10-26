@@ -3,7 +3,11 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import HypsHub 1.0
 
-/* 通用配置字段：bool / text / int / array / file / dir / runner */
+/* 通用配置字段：bool / text / int / array / file / dir / runner / enum
+ *
+ * enum 约定：root.options 为 [{value, label}] 列表（也接受纯字符串列表）。
+ * value 为空串的选项表示「未启用」：点击后移除该键，回到上游默认行为。
+ */
 Item {
     id: root
 
@@ -47,6 +51,53 @@ Item {
         if (root.config) {
             root.config.setValue(root.configKey, value);
         }
+    }
+
+    /* enum：取选项的写回值；空串表示「未启用 / 删除该键」 */
+    function optionValue(option) {
+        if (option === undefined || option === null) {
+            return "";
+        }
+        if (typeof option === "object") {
+            return option.value !== undefined && option.value !== null
+                    ? String(option.value) : "";
+        }
+        return String(option);
+    }
+
+    function optionLabel(option) {
+        if (option === undefined || option === null) {
+            return "";
+        }
+        if (typeof option === "object") {
+            const label = option.label;
+            return label !== undefined && label !== null && String(label).length > 0
+                    ? String(label) : root.optionValue(option);
+        }
+        return String(option);
+    }
+
+    function optionList() {
+        return root.options !== undefined && root.options !== null ? root.options : [];
+    }
+
+    function isOptionSelected(option) {
+        return root.value() === root.optionValue(option);
+    }
+
+    /* 与 bool / text 一致：有值走 setValue，空值走 removeKey（恢复默认） */
+    function writeOption(option) {
+        if (!root.config) {
+            return;
+        }
+        const next = root.optionValue(option);
+        if (next.length === 0) {
+            if (root.keyPresent()) {
+                root.config.removeKey(root.configKey);
+            }
+            return;
+        }
+        root.setValue(next);
     }
 
     function setArray() {
@@ -153,6 +204,74 @@ Item {
             ToggleSwitch {
                 checked: root.truthy(root.value())
                 onToggled: function (value) { root.setValue(value ? "true" : "false") }
+            }
+        }
+
+        /* enum：方角细线选项组，选中态用信号色描边 + 左侧 2px 信号条 */
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            visible: root.type === "enum"
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: root.optionList()
+
+                    delegate: Rectangle {
+                        id: chip
+
+                        readonly property string chipText: root.optionLabel(modelData)
+                        readonly property bool selected: root.isOptionSelected(modelData)
+
+                        width: chipLabel.implicitWidth + 22
+                        height: 34
+                        radius: 0
+                        color: chip.selected ? Theme.colors.ink3
+                               : (chipMouse.containsMouse ? Theme.colors.ink2 : "transparent")
+                        border.width: 1
+                        border.color: chip.selected ? Theme.colors.signal
+                                    : (chipMouse.containsMouse ? Theme.colors.lineHover
+                                                               : Theme.colors.line)
+
+                        Rectangle {
+                            width: 2
+                            height: parent.height
+                            color: chip.selected ? Theme.colors.signal : "transparent"
+                        }
+
+                        Text {
+                            id: chipLabel
+                            anchors.centerIn: parent
+                            text: chip.chipText
+                            color: chip.selected ? Theme.colors.signal : Theme.colors.paper2
+                            font.family: App.monoFontFamily
+                            font.pixelSize: 11
+                            font.letterSpacing: 0.4
+                            elide: Text.ElideRight
+                        }
+
+                        MouseArea {
+                            id: chipMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.writeOption(modelData)
+                        }
+                    }
+                }
+            }
+
+            MicroLabel {
+                label: root.keyPresent() && root.value().length > 0
+                       ? "CURRENT / " + root.value() : "CURRENT / UNSET"
+                color: root.keyPresent() && root.value().length > 0
+                       ? Theme.colors.signal : Theme.colors.disabled
+                microSize: 8
+                tracking: 1.0
+                elide: Text.ElideRight
             }
         }
 

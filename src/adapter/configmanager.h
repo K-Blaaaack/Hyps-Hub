@@ -47,6 +47,7 @@ public:
     QString gamesDirectory() const;
 
     Q_INVOKABLE hyps::ConfigFile *gameConfig(const QString &slug);
+    Q_INVOKABLE QVariantList gameFieldsFor(const QString &slug) const;
     Q_INVOKABLE hyps::ConfigFile *runnerConfig(const QString &name);
     Q_INVOKABLE void reloadAll();
     Q_INVOKABLE void reloadRunners();
@@ -66,6 +67,8 @@ private:
     void reloadCommon();
     QVariantList issue(const QString &level, const QString &key, const QString &message) const;
     QVariantList configIssues(const ConfigFile &config) const;
+    QVariantList endfieldSurrogateFields() const;
+    void validateEndfieldSurrogate(const ConfigFile &config, QVariantList *issues) const;
 
     AppPaths *m_paths = nullptr;
     RuntimeManager *m_runtime = nullptr;

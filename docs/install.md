@@ -53,7 +53,7 @@ ctest --test-dir build --output-on-failure
 - `SHA256SUMS`
 
 ```bash
-sudo pacman -U hyps-hub-0.2.0-1-x86_64.pkg.tar.zst
+sudo pacman -U hyps-hub-0.3.0-1-x86_64.pkg.tar.zst
 ```
 
 CI（Arch Linux 容器）会在每次推送到 `main` 时构建并运行 CTest；推送 `v*` 标签时自动构建安装包并创建 GitHub Release。
@@ -64,18 +64,18 @@ CI（Arch Linux 容器）会在每次推送到 `main` 时构建并运行 CTest�
 
 ```bash
 # 1) 生成源码包（在仓库根目录）
-git archive --prefix=hyps-hub-0.2.0/ -o hyps-hub-0.2.0.tar.gz HEAD
+git archive --prefix=hyps-hub-0.3.0/ -o hyps-hub-0.3.0.tar.gz HEAD
 
 # 2) 准备打包目录
 mkdir -p /tmp/hyps-hub-pkg
-cp packaging/PKGBUILD hyps-hub-0.2.0.tar.gz /tmp/hyps-hub-pkg/
+cp packaging/PKGBUILD hyps-hub-0.3.0.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg
 
 # 3) 构建并打包（不安装）
 makepkg -f
 
 # 4) 安装
-sudo pacman -U hyps-hub-0.2.0-1-x86_64.pkg.tar.zst
+sudo pacman -U hyps-hub-0.3.0-1-x86_64.pkg.tar.zst
 ```
 
 注意：
@@ -116,7 +116,18 @@ sudo pacman -Rns hyps-hub
 
 整个过程不会读取、修改、移动或清理 `~/Hyps`。
 
-## 8. 构建可复现性
+## 8. 版本与上游同步
+
+当前版本 **0.3.0**，对应上游 Hyps 提交 `a2ac842`（区间 `1b94dc8..a2ac842` 共 16 个新提交，含起点 `1b94dc8` 计 17 个）。
+版本号同时出现在 `CMakeLists.txt` 的 `project(HypsHub VERSION ...)` 与 `packaging/PKGBUILD` 的 `pkgver`，
+发版时必须一起改；文档中的命令与产物名（`hyps-hub-<版本>.tar.gz`、`hyps-hub-<版本>-1-x86_64.pkg.tar.zst`）随之更新。
+
+- 从 0.2.0 升级：`sudo pacman -U hyps-hub-0.3.0-1-x86_64.pkg.tar.zst`；用户数据、Hyps 组件与配置目录不受影响。
+- 升级后若「通用配置」提示 `features.hosts_disconnect.*` 残留键，说明该功能已被上游移除，可直接在原始编辑器中删除。
+- 组件本身按快进方式升级：诊断页「检查更新」→ 应用更新（`git fetch` + `git merge --ff-only`），目标提交 `a2ac842`。
+- 变更明细见 [upstream-sync-2026-10-27.md](upstream-sync-2026-10-27.md)。
+
+## 9. 构建可复现性
 
 - 版本号来自 CMake 的 `project(HypsHub VERSION ...)`。
 - 构建信息（Git commit）由 CMake 在配置时读取仓库 HEAD；无 Git 仓库时显示 `unknown`。

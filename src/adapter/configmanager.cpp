@@ -6,8 +6,10 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QPair>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QVector>
 
 namespace hyps {
 
@@ -30,6 +32,35 @@ QVariantMap field(const QString &key, const QString &title, const QString &group
     map.insert(QStringLiteral("description"), description);
     map.insert(QStringLiteral("hint"), hint);
     return map;
+}
+
+QVariantMap option(const QString &value, const QString &label)
+{
+    QVariantMap map;
+    map.insert(QStringLiteral("value"), value);
+    map.insert(QStringLiteral("label"), label);
+    return map;
+}
+
+QVariantMap enumField(const QString &key, const QString &title, const QString &group,
+                      const QString &description, const QVariantList &options,
+                      const QString &hint = QString())
+{
+    QVariantMap map = field(key, title, group, QStringLiteral("enum"), description, hint);
+    map.insert(QStringLiteral("options"), options);
+    return map;
+}
+
+QString endfieldSurrogatePrefix()
+{
+    return QStringLiteral("endfield.surrogate.");
+}
+
+bool isPositiveInteger(const QString &value)
+{
+    bool ok = false;
+    const int number = value.trimmed().toInt(&ok);
+    return ok && number > 0;
 }
 
 } // namespace
@@ -163,10 +194,6 @@ void ConfigManager::setupFields()
         field(QStringLiteral("obs_vkcapture.wrapper.enabled"), QStringLiteral("OBS 游戏捕获"),
               QStringLiteral("可选包装器"), QStringLiteral("bool"),
               QStringLiteral("通过 obs-gamecapture 包装器启用 Vulkan 捕获。")),
-        field(QStringLiteral("features.hosts_disconnect.enabled"),
-              QStringLiteral("启动时临时修改 Hosts"), QStringLiteral("可选包装器"),
-              QStringLiteral("bool"),
-              QStringLiteral("游戏运行期间向 hosts 写入指定内容以断网启动，退出后恢复（可能使用 sudo）。")),
         field(QStringLiteral("features.ntfs_detect.enabled"), QStringLiteral("NTFS 检测"),
               QStringLiteral("可选包装器"), QStringLiteral("bool"),
               QStringLiteral("检测游戏是否位于 NTFS 分区并给出提示（默认开启）。")),
@@ -199,6 +226,66 @@ void ConfigManager::setupFields()
               QStringLiteral("高级"), QStringLiteral("text"),
               QStringLiteral("少数需要父进程替身的游戏会用到，例如 umu-genshin。")),
     };
+}
+
+QVariantList ConfigManager::endfieldSurrogateFields() const
+{
+    const QString group = QStringLiteral("终末地替身");
+
+    return {
+        enumField(QStringLiteral("endfield.surrogate.mode"), QStringLiteral("替身模式"), group,
+                  QStringLiteral("终末地替身启动方式，默认不启用。hardlink-or-copy 会按可用性自动选择硬链接或复制，"
+                                 "launcher 会挂起官方启动器再由游戏进程接管。"),
+                  {option(QString(), QStringLiteral("未启用")),
+                   option(QStringLiteral("hardlink-or-copy"), QStringLiteral("hardlink-or-copy")),
+                   option(QStringLiteral("hardlink"), QStringLiteral("hardlink")),
+                   option(QStringLiteral("copy"), QStringLiteral("copy")),
+                   option(QStringLiteral("launcher"),
+                          QStringLiteral("launcher（挂起官方启动器）"))},
+                  QStringLiteral("留空表示不启用替身模式。")),
+        field(QStringLiteral("endfield.surrogate.launcher"), QStringLiteral("启动器"), group,
+              QStringLiteral("dir"),
+              QStringLiteral("launcher 模式填官方启动器目录（自动选用版本号最高的 Games.exe）"
+                             "或 Games.exe 完整路径；替身模式下作为替身源文件，默认取 game.exe。")),
+        field(QStringLiteral("endfield.surrogate.dir"), QStringLiteral("替身目标目录"), group,
+              QStringLiteral("dir"),
+              QStringLiteral("替身文件的输出目录，文件名固定为 Games.exe；硬链接与复制共用，"
+                             "可被 hardlink_dir / copy_dir 覆盖。同一前缀下与 target 只能二选一。")),
+        field(QStringLiteral("endfield.surrogate.target"), QStringLiteral("替身目标文件"), group,
+              QStringLiteral("file"),
+              QStringLiteral("替身文件的完整路径，可自定义文件名；硬链接与复制共用，"
+                             "可被 hardlink_target / copy_target 覆盖。同一前缀下与 dir 只能二选一。")),
+        field(QStringLiteral("endfield.surrogate.hardlink_dir"), QStringLiteral("hardlink 目标目录"),
+              group, QStringLiteral("dir"),
+              QStringLiteral("仅硬链接方式生效，优先于 endfield.surrogate.dir。")),
+        field(QStringLiteral("endfield.surrogate.hardlink_target"),
+              QStringLiteral("hardlink 目标文件"), group, QStringLiteral("file"),
+              QStringLiteral("仅硬链接方式生效，优先于 endfield.surrogate.target；与 hardlink_dir 二选一。")),
+        field(QStringLiteral("endfield.surrogate.copy_dir"), QStringLiteral("copy 目标目录"), group,
+              QStringLiteral("dir"),
+              QStringLiteral("仅复制方式生效，优先于 endfield.surrogate.dir。")),
+        field(QStringLiteral("endfield.surrogate.copy_target"), QStringLiteral("copy 目标文件"),
+              group, QStringLiteral("file"),
+              QStringLiteral("仅复制方式生效，优先于 endfield.surrogate.target；与 copy_dir 二选一。")),
+        field(QStringLiteral("endfield.surrogate.keep"), QStringLiteral("保留替身文件"), group,
+              QStringLiteral("bool"),
+              QStringLiteral("游戏退出后保留替身文件与新建目录，默认关闭。")),
+        field(QStringLiteral("endfield.surrogate.exit_after"), QStringLiteral("退出等待（秒）"),
+              group, QStringLiteral("int"),
+              QStringLiteral("游戏启动后等待 N 秒再结束挂起的父进程；仅正整数有效。")),
+        field(QStringLiteral("endfield.surrogate.show_info"), QStringLiteral("显示工具日志"),
+              group, QStringLiteral("bool"),
+              QStringLiteral("用信息框显示替身工具的 info 级日志。")),
+    };
+}
+
+QVariantList ConfigManager::gameFieldsFor(const QString &slug) const
+{
+    QVariantList fields = m_gameFields;
+    if (slug == QStringLiteral("endfield")) {
+        fields += endfieldSurrogateFields();
+    }
+    return fields;
 }
 
 void ConfigManager::reloadCommon()
@@ -362,12 +449,118 @@ QVariantList ConfigManager::validateCommon()
         issues += issue(QStringLiteral("warning"), QStringLiteral("gamemode.wrapper.enabled"),
                         tr("已启用 GameMode wrapper，但系统里找不到 gamemoderun。"));
     }
-    if (m_common->isTrue(QStringLiteral("features.hosts_disconnect.enabled"))
-        && !m_common->hasKey(QStringLiteral("features.hosts_disconnect.content"))) {
-        issues += issue(QStringLiteral("warning"), QStringLiteral("features.hosts_disconnect.enabled"),
-                        tr("已启用 Hosts 断网，但没有设置 features.hosts_disconnect.content。"));
+    QStringList hostsKeys;
+    const QStringList commonKeys = m_common->keys();
+    for (const QString &key : commonKeys) {
+        if (key.startsWith(QStringLiteral("features.hosts_disconnect."))) {
+            hostsKeys.append(key);
+        }
+    }
+    if (!hostsKeys.isEmpty()) {
+        issues += issue(QStringLiteral("warning"), QStringLiteral("features.hosts_disconnect"),
+                        tr("上游 Hyps 已移除 hosts_disconnect 功能，配置项 %1 会被忽略，可以删除。")
+                                .arg(hostsKeys.join(QStringLiteral(", "))));
     }
     return issues;
+}
+
+void ConfigManager::validateEndfieldSurrogate(const ConfigFile &config,
+                                              QVariantList *issues) const
+{
+    const QString prefix = endfieldSurrogatePrefix();
+    const QString modeKey = prefix + QStringLiteral("mode");
+    const QString launcherKey = prefix + QStringLiteral("launcher");
+    const QStringList allKeys = config.keys();
+
+    QStringList surrogateKeys;
+    for (const QString &key : allKeys) {
+        if (key.startsWith(prefix)) {
+            surrogateKeys.append(key);
+        }
+    }
+    if (surrogateKeys.isEmpty()) {
+        return;
+    }
+
+    const QString mode = config.valueFor(modeKey).trimmed();
+    if (mode.isEmpty()) {
+        QStringList others;
+        for (const QString &key : surrogateKeys) {
+            if (key != modeKey) {
+                others.append(key);
+            }
+        }
+        if (!others.isEmpty()) {
+            *issues += issue(QStringLiteral("error"), modeKey,
+                             tr("已设置 %1，但没有设置 endfield.surrogate.mode；留空表示不启用替身，"
+                                "请补齐 mode 或删除这些键。")
+                                     .arg(others.join(QStringLiteral(", "))));
+        }
+        return;
+    }
+
+    static const QStringList modes = {
+        QStringLiteral("launcher"),
+        QStringLiteral("hardlink"),
+        QStringLiteral("copy"),
+        QStringLiteral("hardlink-or-copy"),
+    };
+    if (!modes.contains(mode)) {
+        *issues += issue(QStringLiteral("error"), modeKey,
+                         tr("endfield.surrogate.mode 的取值 %1 无效，只能是 %2。")
+                                 .arg(mode, modes.join(QStringLiteral(" / "))));
+        return;
+    }
+
+    const QStringList sourceKeys = {
+        prefix + QStringLiteral("dir"),
+        prefix + QStringLiteral("target"),
+        prefix + QStringLiteral("hardlink_dir"),
+        prefix + QStringLiteral("hardlink_target"),
+        prefix + QStringLiteral("copy_dir"),
+        prefix + QStringLiteral("copy_target"),
+    };
+
+    if (mode == QStringLiteral("launcher")) {
+        if (config.valueFor(launcherKey).trimmed().isEmpty()) {
+            *issues += issue(QStringLiteral("error"), launcherKey,
+                             tr("endfield.surrogate.mode=launcher 时必须设置 "
+                                "endfield.surrogate.launcher（启动器目录或 Games.exe 路径）。"));
+        }
+        QStringList conflicts;
+        for (const QString &key : sourceKeys) {
+            if (config.hasKey(key)) {
+                conflicts.append(key);
+            }
+        }
+        if (!conflicts.isEmpty()) {
+            *issues += issue(QStringLiteral("error"), modeKey,
+                             tr("endfield.surrogate.mode=launcher 时不能设置 %1，"
+                                "这些源目录/文件只用于 hardlink / copy 替身模式。")
+                                     .arg(conflicts.join(QStringLiteral(", "))));
+        }
+        return;
+    }
+
+    const QVector<QPair<QString, QString>> prefixPairs = {
+        {prefix + QStringLiteral("dir"), prefix + QStringLiteral("target")},
+        {prefix + QStringLiteral("hardlink_dir"), prefix + QStringLiteral("hardlink_target")},
+        {prefix + QStringLiteral("copy_dir"), prefix + QStringLiteral("copy_target")},
+    };
+    for (const auto &pair : prefixPairs) {
+        if (config.hasKey(pair.first) && config.hasKey(pair.second)) {
+            *issues += issue(QStringLiteral("error"), pair.first,
+                             tr("%1 与 %2 只能二选一，请删除其中一个。")
+                                     .arg(pair.first, pair.second));
+        }
+    }
+
+    const QString exitAfterKey = prefix + QStringLiteral("exit_after");
+    if (config.hasKey(exitAfterKey) && !isPositiveInteger(config.valueFor(exitAfterKey))) {
+        *issues += issue(QStringLiteral("error"), exitAfterKey,
+                         tr("endfield.surrogate.exit_after 必须是正整数（秒），当前值：%1。")
+                                 .arg(config.valueFor(exitAfterKey)));
+    }
 }
 
 QVariantList ConfigManager::validateGame(const QString &slug)
@@ -409,6 +602,15 @@ QVariantList ConfigManager::validateGame(const QString &slug)
     } else if (!runner.isEmpty() && !runnerExists(runner) && !inlineRunner) {
         issues += issue(QStringLiteral("warning"), QStringLiteral("runner.name"),
                         tr("运行器配置不存在：%1.conf").arg(runner));
+    }
+
+    if (config->hasKey(QStringLiteral("gi.fps_unlock.prog"))) {
+        issues += issue(QStringLiteral("warning"), QStringLiteral("gi.fps_unlock.prog"),
+                        tr("上游已移除 gi.fps_unlock.prog，解帧进程名改为从 game.exe 的 basename 推导，"
+                           "该键会被忽略，可以删除。"));
+    }
+    if (slug == QStringLiteral("endfield")) {
+        validateEndfieldSurrogate(*config, &issues);
     }
 
     return issues;

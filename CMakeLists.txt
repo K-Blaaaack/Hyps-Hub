@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(HypsHub
-    VERSION 0.2.0
+    VERSION 0.3.0
     DESCRIPTION "Hyps Hub - a native Linux desktop client for the Hyps CLI"
     HOMEPAGE_URL "https://github.com/K-Blaaaack/Hyps-Hub"
     LANGUAGES CXX
@@ -210,6 +210,7 @@ install(FILES
     docs/development.md
     docs/architecture.md
     docs/research.md
+    docs/upstream-sync-2026-10-27.md
     docs/verification.md
     docs/credits.md
     DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/hyps-hub"

@@ -108,6 +108,9 @@ NO_COLOR=1
 
 启动脚本发现：读取 `<runtime>/scripts/*.sh`，解析其中 `GAME_NAME="<slug>"`（与上游 `init_find_launcher_script` 相同规则），不硬编码文件名。
 
+上游基线 `a2ac842`（0.3.0）起，`init.sh --check` 报表不再包含「hosts 可写」项；`EnvironmentReport`
+只按上游真实输出渲染分组与项目，不假设固定的必需项/可选能力集合，也不为已移除的功能保留兼容分支。
+
 `ProcessRunner` 约束：
 
 - `QProcess::setProgram` + `setArguments`，永不使用 shell。
@@ -142,17 +145,59 @@ ready ──applyUpdate──► updating ──成功──► ready
 `ConfigFile` 忠实实现上游 `config/parse.sh` 的语法：
 
 - 注释、空行、`[section]`、引号、行内注释、多行 `[ ]`/`( )` 数组。
-- 键集合与上游一致；未识别键原样保留。
+- 键集合以上游 0.3.0 基线（`a2ac842`）为准；未识别键原样保留，不做迁移、不做自动删除。
 - `setValue` / `setArray` / `removeKey` 只重写目标行，其余行按原文保留（含注释与顺序）。
 - 保存：先写 `.bak.<时间戳>`（存在原文件时），再用 `QSaveFile` 原子替换；最多保留 10 个备份。
-- 校验：语法错误阻止保存；`game.exe` 占位/不存在、`runner.name` 无对应配置、重复键等给警告并要求确认。
 - 高级模式：原始文本编辑器，应用前完整解析，失败不落盘。
 
-可视化字段（P0）：
+### 6.1 字段目录（按游戏动态生成）
 
-- 游戏：`game.exe`（文件选择）、`runner.name`（下拉，来自 `runners/*.conf`）、`game.args`（多行数组）、`game.cwd`、`game.prefix`、`game.umu_id`。
-- 通用：`mangohud.enabled`、`gamemode.wrapper.enabled`、`gamemode.ld_preload.enabled`、`prepare.kill_wineserver`、`prepare.intel_rapl_read`、`cache.shader.enabled`、`cache.dx.enabled`、`taskset.enabled`/`taskset.cpus`、`features.userdata_link.enabled`、`features.time_record.enabled`、`overlay.enabled`/`overlay.lower`、`gamescope.enabled`、`inhibit.enabled`、`env.PROTON_DLSS_INDICATOR` 等。
+`ConfigManager` 提供三层字段目录，都是 `QVariantMap{key, title, group, type, description, hint}`：
+
+| 入口 | 内容 |
+| --- | --- |
+| `commonFields()` | 通用配置（`_common.conf`）字段，静态列表 |
+| `gameFields()` | 游戏配置基础字段：`game.exe`、`runner.name`、`game.args`、`game.cwd`、`game.prefix`、`game.umu_id` |
+| `gameFieldsFor(slug)` | 基础字段副本 + 该游戏专属字段；目前仅 `endfield` 追加 `group = "终末地替身"` 的 11 个键 |
+
+- 专属字段只出现在对应游戏下：QML 在 `selectedSlug` 变化时重新求值字段列表，避免把 A 游戏的字段渲染到 B 游戏。
+- `type` 取值：`bool`、`text`、`int`、`file`、`dir`、`runner`、`array`、`enum`。
+- `type = enum` 时字段额外带 `options`（`[{value, label}]`，也接受纯字符串列表），由 `ConfigField.qml`
+  渲染为可点选项；`value` 为空的选项表示「未启用」，点击后删除该键，回到上游默认行为。
+- 未列入目录的键不出现在可视化分组里，但仍可在原始编辑器中编辑。
+
+### 6.2 通用配置字段（P0）
+
+- `mangohud.enabled`、`gamemode.wrapper.enabled`、`gamemode.ld_preload.enabled`、`prepare.kill_wineserver`、
+  `prepare.intel_rapl_read`、`cache.shader.enabled`、`cache.dx.enabled`、`taskset.enabled`/`taskset.cpus`、
+  `features.userdata_link.enabled`、`features.time_record.enabled`、`overlay.enabled`/`overlay.lower`、
+  `gamescope.enabled`、`inhibit.enabled`、`env.PROTON_DLSS_INDICATOR` 等。
+- `features.hosts_disconnect.*` 已随上游 `a2ac842` 移除，不再出现在字段目录；残留键按 6.3 告警。
 - 每个字段支持“恢复默认（删除该键）”；未知键折叠在高级编辑器中。
+
+### 6.3 语义校验
+
+校验分两层：`ConfigFile::validate()` 负责语法与重复键，`ConfigManager::validate*()` 负责语义。
+
+- **通用**：`gamemode.wrapper.enabled` 与 `gamemode.ld_preload.enabled` 互斥；`mangohud` / `taskset` / `overlay`
+  （含 `fuse-overlayfs`）/ `gamescope` / `gamemoderun` 启用但缺依赖或参数时告警。
+- **残留键**：存在以 `features.hosts_disconnect.` 开头的键时告警（key = `features.hosts_disconnect`），
+  说明上游已移除该功能、配置会被忽略、可在原始编辑器中删除。
+- **游戏**：`game.exe` 缺失/占位/非绝对路径/文件不存在、`runner.name` 无对应配置且未内联 `runner.exe`/`runner.protonpath`。
+- **弃用键**：任意游戏配置存在 `gi.fps_unlock.prog` 时告警——上游改为未设置时取 `game.exe` basename。
+
+终末地替身校验（仅 `endfield` 生效）：
+
+| 规则 | 触发条件 | 级别 |
+| --- | --- | --- |
+| 缺少 mode | `mode` 为空但存在其他 `endfield.surrogate.*` 键（只有空 `mode` 视为不启用） | error |
+| mode 非法 | `mode` 不在 `launcher` / `hardlink` / `copy` / `hardlink-or-copy` | error |
+| launcher 模式冲突 | `mode = launcher` 时缺少 `launcher`，或同时存在 `dir`/`target`/`hardlink_*`/`copy_*` | error |
+| 目标二选一 | 前缀 `""`、`hardlink_`、`copy_` 中任一同前缀 `dir` 与 `target` 同时存在（替身模式下校验） | error |
+| exit_after 非法 | `exit_after` 存在但不是正整数（替身模式下校验） | error |
+
+`error` 阻止保存，`warning` 只提示并要求确认。上游语义与迁移背景见
+[upstream-sync-2026-10-27.md](upstream-sync-2026-10-27.md)。
 
 ## 7. 任务与日志
 
@@ -177,6 +222,7 @@ ready ──applyUpdate──► updating ──成功──► ready
 | --- | --- |
 | AppPaths | 注入环境映射，验证 XDG 解析与覆盖 |
 | ConfigFile | 上游示例配置作为 fixture：解析、往返、编辑、备份、损坏输入 |
+| ConfigManager | 字段目录（含 `gameFieldsFor` 的按游戏动态字段）、语义校验（hosts 残留键、替身模式/互斥/exit_after、`gi.fps_unlock.prog` 弃用） |
 | EnvironmentReport | 真实 `init --check` 输出 + ANSI/异常变体 |
 | ProcessRunner | 临时 bash 脚本：stdout/stderr、退出码、超时、取消、路径空格、非 UTF-8 |
 | HypsAdapter | 假 Hyps 组件（bash 脚本模拟 CLI），校验参数数组、环境注入、启动脚本发现、错误路径 |

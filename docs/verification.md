@@ -2,7 +2,8 @@
 
 > 环境：Arch Linux（rolling）、Qt 6.12.0、GCC 16.2.1、Ninja、Wayland/niri 会话（UI 验证使用
 > `QT_QPA_PLATFORM=offscreen` + 软件渲染后端）。
-> 交付提交：见 `git log -1`；本文记录的是交付前的实际执行结果。
+> 当前版本：**0.3.0**（上游 Hyps 基线 `a2ac842`，见 [upstream-sync-2026-10-27.md](upstream-sync-2026-10-27.md)）。
+> 交付提交：见 `git log -1`；本文记录的是实际执行结果，0.3.0 新增项在构建验证后补填。
 
 ## 1. 工作区与受保护目录
 
@@ -19,7 +20,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-结果：**11/11 通过**（`tst_network_e2e` 默认禁用）：
+结果：**11/11 通过**（0.3.0 实测：`ctest --test-dir build --output-on-failure`，2026-10-27；`tst_network_e2e` 默认禁用）：
 
 | 测试 | 覆盖 | 结果 |
 | --- | --- | --- |
@@ -32,8 +33,31 @@ ctest --test-dir build --output-on-failure
 | `tst_gamecatalog` | 已配置游戏、模板、缺失 exe/启动脚本状态 | PASS |
 | `tst_diagnostics` | 诊断包结构、密钥/Authorization/URL 凭据脱敏、大日志尾部导出 | PASS |
 | `tst_taskmanager` | 历史日志懒加载、大日志尾部、清空历史删除任务日志 | PASS |
-| `tst_configmanager` | 连字符 slug、未保存配置检测 | PASS |
+| `tst_configmanager` | 连字符 slug、未保存配置检测；0.3.0 新增 15 个用例见下 | PASS（0.3.0：19 passed / 0 failed） |
 | `tst_smoke` | 真实进程加载全部 QML 后退出 | PASS |
+
+### 0.3.0 新增用例（已实测）
+
+0.3.0 适配上游 `a2ac842`，`tst_configmanager` 新增 15 个用例（另有 2 个原有用例）。
+实测：`./build/tests/tst_configmanager` → **19 passed / 0 failed / 0 skipped**（2026-10-27）。
+
+| 用例 | 覆盖 | 结果 |
+| --- | --- | --- |
+| `commonFieldsDropHostsDisconnect` | 通用字段目录不再包含 `features.hosts_disconnect.enabled` | PASS |
+| `gameFieldsForEndfieldAppendsSurrogateCatalog` | `gameFieldsFor("endfield")` 追加「终末地替身」11 个字段，`mode` 为 `enum` 且带 `options` | PASS |
+| `gameFieldsForOtherGamesKeepsBaseCatalog` | 其他游戏只返回基础字段 | PASS |
+| `reportsHostsDisconnectResidualKeys` | 残留 `features.hosts_disconnect.*` 键 → warning | PASS |
+| `acceptsCommonWithoutHostsKeys` | 无残留键时 `validateCommon()` 不产生 hosts 相关告警 | PASS |
+| `endfieldSurrogateModeMissing` | 存在其他替身键但 `mode` 为空 → error | PASS |
+| `endfieldSurrogateModeInvalid` | `mode` 不在 `launcher`/`hardlink`/`copy`/`hardlink-or-copy` → error | PASS |
+| `endfieldSurrogateDisabledIsClean` | 只有空 `mode`（未启用）→ 无 error | PASS |
+| `endfieldSurrogateDirTargetConflict` | 同前缀 `dir` 与 `target` 同时存在 → error | PASS |
+| `endfieldSurrogateHardlinkAndCopyConflicts` | `hardlink_`/`copy_` 前缀的 `dir`+`target` 冲突 → error | PASS |
+| `endfieldLauncherModeRequiresLauncher` | `mode = launcher` 缺 `launcher` → error | PASS |
+| `endfieldLauncherModeRejectsSourceKeys` | `mode = launcher` 同时存在源目录/文件键 → error | PASS |
+| `endfieldExitAfterMustBePositiveInteger` | `exit_after` 非正整数 → error | PASS |
+| `endfieldSurrogateKeysIgnoredForOtherGames` | 非 `endfield` 游戏不校验替身键 | PASS |
+| `warnsAboutRemovedFpsUnlockProg` | 存在 `gi.fps_unlock.prog` → warning（不阻止保存） | PASS |
 
 ### 真实网络端到端测试
 
@@ -85,21 +109,23 @@ cmake --install build --prefix "$PWD/build/prefix"
 bin/hyps-hub
 share/applications/hyps-hub.desktop
 share/icons/hicolor/scalable/apps/hyps-hub.svg
-share/doc/hyps-hub/{README,install,troubleshooting,development,architecture,research,design,credits}.md
+share/doc/hyps-hub/{README,install,troubleshooting,development,architecture,research,upstream-sync-2026-10-27,design,credits}.md
 share/licenses/hyps-hub/GPL-3.0-only.txt
 ```
 
 `desktop-file-validate` 仅提示 Categories 建议（已改为单一 `Game;`）。
-安装后的二进制以 `--version` 输出 `hyps-hub 0.2.0`。
+版本号来自 CMake 的 `project(HypsHub VERSION ...)`，0.3.0 构建后二进制以 `--version` 输出
+`hyps-hub 0.3.0`（0.2.0 实测输出为 `hyps-hub 0.2.0`）。
 
 ### Arch PKGBUILD
 
 ```bash
-git archive --prefix=hyps-hub-0.2.0/ -o hyps-hub-0.2.0.tar.gz HEAD
+git archive --prefix=hyps-hub-0.3.0/ -o hyps-hub-0.3.0.tar.gz HEAD
 makepkg -f
 ```
 
-实际结果：`hyps-hub 0.2.0-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
+0.2.0 实测：`hyps-hub 0.2.0-1 (x86_64)` 构建成功，包大小约 378 KiB（安装后约 832 KiB）。
+0.3.0 实测（2026-10-27，本机 `makepkg -f`）：`hyps-hub 0.3.0-1 (x86_64)` 构建成功，包大小约 399 KiB（`size = 907170`，安装后约 886 KiB），`.PKGINFO` 的 `pkgver` 为 `0.3.0-1`。
 包内容包含可执行文件、desktop、图标、文档、许可证；无安装脚本，不写系统级用户配置。
 从包中解出的二进制在独立 XDG 目录下可正常执行 `--version`，`ldd` 无缺失库。
 
@@ -114,12 +140,16 @@ makepkg -f
 | CLI 调用全部经过适配层 | 是（`HypsAdapter` / `RuntimeManager`，QML 无命令） |
 | 错误处理、日志、配置、更新策略 | 是（单元测试 + 界面） |
 | Arch 打包经过实际验证 | 是（makepkg 成功，检查包内容） |
+| 上游 0.3.0 契约同步（hosts 移除、替身字段、弃用键） | 已实现，随 0.3.0 验证（字段目录 + 语义校验用例） |
 | 未实现功能/已知问题如实记录 | 见 README「已知限制」与下文 |
 
 ## 6. 未覆盖与已知限制
 
 - **真实游戏启动未执行**：本机没有已安装的上游支持游戏；启动路径通过假组件验证了参数、环境、
   启动脚本发现与退出码，不冒充真实游戏运行结果。
+- **终末地替身未做真实运行验证**：0.3.0 只验证字段目录与语义校验（模式冲突、目标互斥、`exit_after`），
+  未实际生成替身文件或挂起官方启动器。
+- **hosts 断网已随上游移除**：`a2ac842` 删除该功能，0.3.0 只保留残留键告警，未验证旧配置迁移（因为不做迁移）。
 - **交互流程未做自动化点击测试**：按钮/对话框通过 QML 冒烟加载与截图验证，未做 GUI 自动化。
 - **Wayland 实际窗口行为**：截图使用 offscreen；Qt Wayland 路径未在真实合成器上做窗口状态恢复验证。
 - **桌面通知**：D-Bus 接口已实现并在无服务时静默降级，未在真实通知守护进程上验证。

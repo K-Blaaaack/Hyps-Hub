@@ -16,8 +16,32 @@ Item {
     property var issues: []
     property bool advanced: false
 
+    /* 字段定义来自 Configs.gameFieldsFor(selectedSlug)：基础字段 + 该游戏专属字段。
+     * 缓存成普通属性，保证 Repeater 的 model 在切换游戏后重新求值。 */
+    property var fieldList: []
+    property var basicFields: []
+    property var advancedFields: []
+    property var surrogateFields: []
+
     function syncGameInfo() {
         gameInfo = selectedSlug.length > 0 ? Games.gameBySlug(selectedSlug) : ({});
+    }
+
+    function refreshFields() {
+        let list = null;
+        if (page.selectedSlug.length > 0) {
+            try {
+                /* C++ 契约：基础字段 + 该游戏专属字段（endfield 额外带「终末地替身」组） */
+                list = Configs.gameFieldsFor(page.selectedSlug);
+            } catch (error) {
+                /* gameFieldsFor 尚未就绪时退回基础字段，避免运行期报错 */
+                list = Configs.gameFields;
+            }
+        }
+        page.fieldList = list ? list : [];
+        page.basicFields = page.fieldsFor("基础");
+        page.advancedFields = page.fieldsFor("高级");
+        page.surrogateFields = page.fieldsFor("终末地替身");
     }
 
     function refreshIssues() {
@@ -81,14 +105,25 @@ Item {
     }
 
     function fieldsFor(group) {
-        const all = Configs.gameFields;
+        const all = page.fieldList;
         const result = [];
         for (let i = 0; i < all.length; ++i) {
-            if (all[i].group === group) {
+            if (String(all[i].group) === group) {
                 result.push(all[i]);
             }
         }
         return result;
+    }
+
+    /* enum 字段的选项：runner 类型仍用运行器列表，其余读字段自带的 options */
+    function fieldOptions(field) {
+        if (!field) {
+            return [];
+        }
+        if (field.type === "runner") {
+            return Configs.runnerNames;
+        }
+        return field.options !== undefined && field.options !== null ? field.options : [];
     }
 
     function stateKind(level) {
@@ -101,11 +136,13 @@ Item {
         page.selectedSlug = Games.firstSlug();
         page.syncGameInfo();
         page.refreshIssues();
+        page.refreshFields();
     }
 
     onSelectedSlugChanged: {
         page.syncGameInfo();
         page.refreshIssues();
+        page.refreshFields();
     }
 
     Connections {
@@ -116,7 +153,13 @@ Item {
                 page.selectedSlug = Games.firstSlug();
             }
             page.syncGameInfo();
+            page.refreshFields();
         }
+    }
+
+    Connections {
+        target: Configs
+        function onReloaded() { page.refreshFields(); }
     }
 
     Connections {
@@ -430,7 +473,7 @@ Item {
                                 }
 
                                 Repeater {
-                                    model: page.fieldsFor("基础")
+                                    model: page.basicFields
 
                                     delegate: ConfigField {
                                         Layout.fillWidth: true
@@ -440,7 +483,7 @@ Item {
                                         description: modelData.description
                                         hint: modelData.hint
                                         type: modelData.type
-                                        options: Configs.runnerNames
+                                        options: page.fieldOptions(modelData)
                                     }
                                 }
 
@@ -474,7 +517,7 @@ Item {
                                 }
 
                                 Repeater {
-                                    model: page.advanced ? page.fieldsFor("高级") : []
+                                    model: page.advanced ? page.advancedFields : []
 
                                     delegate: ConfigField {
                                         Layout.fillWidth: true
@@ -484,6 +527,48 @@ Item {
                                         description: modelData.description
                                         hint: modelData.hint
                                         type: modelData.type
+                                        options: page.fieldOptions(modelData)
+                                    }
+                                }
+
+                                /* 终末地替身：仅当当前游戏提供该分组字段时出现，
+                                 * 不受「高级参数」开关限制，索引接在高级之后。 */
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 4
+                                    spacing: 12
+                                    visible: page.surrogateFields.length > 0
+
+                                    SectionHeader {
+                                        Layout.fillWidth: true
+                                        index: "03"
+                                        english: "SURROGATE"
+                                        title: "终末地替身"
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: "mode 保持未启用（空值）时不生成替身，游戏仍按原方式启动；"
+                                              + "launcher 模式用于挂起官方启动器后由替身接管启动流程。"
+                                        color: Theme.colors.muted
+                                        font.family: App.uiFontFamily
+                                        font.pixelSize: 11
+                                        wrapMode: Text.WordWrap
+                                    }
+
+                                    Repeater {
+                                        model: page.surrogateFields
+
+                                        delegate: ConfigField {
+                                            Layout.fillWidth: true
+                                            config: page.gameCfg
+                                            configKey: modelData.key
+                                            title: modelData.title
+                                            description: modelData.description
+                                            hint: modelData.hint
+                                            type: modelData.type
+                                            options: page.fieldOptions(modelData)
+                                        }
                                     }
                                 }
 
