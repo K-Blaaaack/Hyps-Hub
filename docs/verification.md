@@ -18,7 +18,7 @@
 | 界面几何审计 | `scripts/ui-audit.sh` **PASS**：8 页面 × 2 尺寸（1440×900 / 1040×720），`collapsed=0 overflow=0 clipped=0 nan=0` |
 | 运行时警告 | 7 个页面逐页离屏渲染，stderr **零警告** |
 | QML 门禁 | `scripts/qml-check.sh` 覆盖全部页面与 46 个组件，qmllint + 离屏加载 + 零 stderr 全通过 |
-| 截图 | `docs/screenshots/` 10 张，1440×900，由 `scripts/ui-fixture.sh` 隔离夹具渲染 |
+| 截图 | `docs/screenshots/` 11 张，1440×900（含 1 张浅色主题），由 `scripts/ui-fixture.sh` 隔离夹具渲染 |
 
 审计口径：`collapsed` = 显式高度被压到 0 的可见控件；`overflow` = 子项超出父容器；
 `clipped` = 文本被裁切；`nan` = 坐标或尺寸出现 NaN/Inf。

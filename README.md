@@ -1,3 +1,5 @@
+<img src="assets/hyps-hub-tile.svg" width="72" height="72" alt="Hyps Hub" align="right">
+
 # Hyps Hub
 
 [![CI](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/K-Blaaaack/Hyps-Hub/actions/workflows/ci.yml)
@@ -25,7 +27,10 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - **上游同步**：跟随上游 Hyps 的配置契约变化（0.3.0 基线 `a2ac842`）。上游移除的功能（如 hosts 断网）
   同步下线，只对残留键告警；弃用键（如 `gi.fps_unlock.prog`）给出迁移提示而不改动用户配置。
 - **Material Design 3 界面**：完整的 MD3 基线配色（浅/深两套语义色）、15 级字阶、形状/间距/状态层令牌；
-  导航轨 + 顶部应用栏 + 卡片式内容区，跟随系统深浅色并支持手动切换。
+  46 个 `Md*` 组件、导航轨 + 顶部应用栏 + 卡片式内容区，跟随系统深浅色并支持手动切换。
+  设计契约见 [docs/design/MD3-SPEC.md](docs/design/MD3-SPEC.md)。
+- **界面可自检**：`scripts/ui-audit.sh` 对 8 个页面 × 2 种窗口尺寸做几何审计（压扁/溢出/裁切/NaN）
+  并逐页渲染检查运行时警告；`scripts/ui-geom.sh` 可导出每个控件的绝对坐标，用于排查像素级错位。
 
 ## 界面与使用教程
 
@@ -48,6 +53,9 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - 「环境检测」面板展示真实 `init.sh --check` 报表，可滚动查看全部项目。
 - 右侧展示最近任务与组件详情（提交、分支、工作区、CLI 入口）。
 - 顶部可快速重新检测；底部「快捷操作」可直达游戏、配置与更新检查。
+- 浅色主题下同一套语义色自动切换，版式与间距完全一致：
+
+![首页（浅色主题）](docs/screenshots/home-light.png)
 
 ### 03 游戏配置与启动
 
@@ -92,8 +100,9 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 
 - 「通用配置」按功能分组展示 MangoHud、GameMode、缓存、taskset、Overlay、时长记录等开关。
 - 每个字段可恢复默认（删除该键）；未知键可通过「原始编辑器」修改，保存前完整校验。
-- 「运行器」页只允许编辑隔离配置目录中的 `runners/*.conf`，来自组件的文件会标记只读。
-- 「路径」页展示 GUI 配置、组件、缓存、数据、状态等真实目录，并可打开。
+- 「运行器」只允许编辑隔离配置目录中的 `runners/*.conf`，来自组件的文件会标记只读。
+- 保存前跑完整校验，有问题时逐条列出；路径类信息（配置/数据/状态/缓存/日志/组件根目录）
+  统一收在「设置 → 目录」，每行可复制或直接在文件管理器中打开。
 
 ### 07 诊断
 
@@ -102,23 +111,27 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 - GUI 前置检查（Git/Bash/数据目录/网络/组件）全部来自真实检测。
 - 环境报表、组件更新状态（`git fetch` + `git merge --ff-only`，脏工作区拒绝）。
 - 白名单诊断命令：环境检测、CLI 帮助、游戏列表、Proton 列表、游玩时长。
+- 「原始报表」保留上游 `init.sh --check` 的原文输出，便于对照 GUI 解析结果。
 - 可导出脱敏诊断包（summary、环境报表、任务历史、日志尾部、SHA 说明）。
 
 ### 08 设置
 
 ![设置](docs/screenshots/settings.png)
 
-- 主题跟随系统，也可固定浅色/深色；两套主题都使用同一套 MD3 语义色与几何令牌。
-- 桌面通知（D-Bus，服务不可用时静默降级）、高级模式、窗口状态。
-- 组件信息与快捷入口；隐私说明与退出行为。
+- 「外观」：主题跟随系统，也可固定浅色/深色；两套主题共用同一套 MD3 语义色与几何令牌。
+- 「行为」：桌面通知（D-Bus，服务不可用时静默降级）、高级模式（显示原始编辑器与诊断命令）。
+- 「目录」：配置/数据/状态/缓存/日志/组件根目录与 Hyps 配置目录，每行可复制或打开。
+- 「运行环境」「窗口」：只读展示 Qt、系统、内核、会话与窗口状态；隐私说明与退出行为。
 
 ### 09 关于
 
 ![关于](docs/screenshots/about.png)
 
-- 应用版本、构建提交、Qt、系统、内核、会话。
-- 组件提交、分支、工作区、组件目录与 CLI 入口。
-- 作者/维护者、GPL-3.0-only 许可、原创资产声明、数据目录与隐私说明。
+- 「构建信息」：应用版本、构建提交、Qt、系统、内核、会话。
+- 「上游组件」：组件提交、分支、工作区、组件目录与 CLI 入口。
+- 「数据隔离」：GUI 配置、组件、缓存、日志、任务日志各自的真实路径。
+- 「常用命令」：CLI 入口与几个常用子命令，可直接复制。
+- 「许可与致谢」：作者/维护者、GPL-3.0-only、原创资产声明与上游致谢。
 
 ## 依赖
 
@@ -148,6 +161,7 @@ ctest --test-dir build --output-on-failure
 ```bash
 ./scripts/build.sh          # 构建 + 测试
 ./scripts/run.sh            # 构建后启动
+./scripts/dev-run.sh        # 开发模式：QML 走磁盘，改完自动重启（--bg 后台 / --stop 停止）
 ```
 
 ## 安装
