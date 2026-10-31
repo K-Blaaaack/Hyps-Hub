@@ -1,588 +1,414 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls
 import HypsHub 1.0
 import "../components"
+import "../theme/Md3.js" as Md3
 
-/* 诊断：前置检查、环境报表、Hyps 组件更新、白名单命令与脱敏导出 */
+/* 诊断页：环境报表、上游更新、诊断命令、导出诊断包、原始报表。 */
 Item {
     id: page
 
     property var host
-    property bool showRaw: false
     property string exportDir: Diag.defaultExportDirectory()
-    property bool networkCheckStarted: false
-
-    function ensureNetworkCheck() {
-        if (!page.visible) {
-            return;
-        }
-        if (!page.networkCheckStarted && Runtime.ready
-            && Runtime.networkStatus === "idle") {
-            page.networkCheckStarted = true;
-            Runtime.checkNetwork();
-        }
-    }
-
-    onVisibleChanged: if (visible) ensureNetworkCheck()
-
-    Connections {
-        target: Runtime
-        function onStateChanged() {
-            if (page.visible) {
-                page.ensureNetworkCheck();
-            }
-        }
-    }
-
-    function runAction(actionId) {
-        const task = Adapter.runDiagnostic(actionId);
-        if (!task) {
-            page.host.showToast("无法执行：" + Adapter.lastError);
-            return;
-        }
-        Tasks.select(task.id);
-        page.host.navigate("tasks");
-    }
-
-    function exportBundle() {
-        const result = Diag.exportBundle(page.exportDir);
-        if (result.ok) {
-            page.host.showToast("诊断包已导出：" + result.path);
-        } else {
-            page.host.showToast("导出失败：" + result.error);
-        }
-    }
 
     Flickable {
-        id: scroll
         anchors.fill: parent
         clip: true
         contentWidth: width
-        contentHeight: content.implicitHeight + 44
+        contentHeight: content.implicitHeight + Md3.space.xl * 2
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn }
+        ScrollBar.vertical: MdScrollBar { }
 
-        Item {
-            width: scroll.width
-            height: content.implicitHeight + 44
+        ColumnLayout {
+            id: content
+            width: Math.min(1100, page.width - Md3.space.xl * 2)
+            x: Md3.space.xl
+            y: Md3.space.lg
+            spacing: Md3.space.xl
 
-            ColumnLayout {
-                id: content
-                x: 24
-                y: 20
-                width: parent.width - 48
-                spacing: 14
+            // 环境报表
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                PageHeader {
-                    Layout.fillWidth: true
-                    index: "05"
-                    title: "诊断"
-                    english: "DIAGNOSTICS"
-                    subtitle: "REAL PROBES / COMPONENT UPDATE / SANITIZED EXPORT"
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
 
-                    ArkButton {
-                        text: "导出诊断包"
-                        implicitHeight: 40
-                        primary: true
-                        onClicked: page.exportBundle()
-                    }
+                    MdSectionHeader {
+                        title: "环境报表"
+                        caption: EnvReport.hasReport
+                                 ? EnvReport.summaryText + " · " + EnvReport.checkedAtText
+                                 : "尚未检测"
 
-                    ArkButton {
-                        text: "打开日志目录"
-                        implicitHeight: 40
-                        ghost: true
-                        onClicked: AppControl.openDirectory(App.logsDir)
-                    }
-                }
-
-                // 前置检查
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: prereqColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-                    accentColor: Theme.colors.signal
-
-                    ColumnLayout {
-                        id: prereqColumn
-                        anchors.fill: parent
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-
-                            SectionHeader {
-                                Layout.fillWidth: true
-                                index: "01"
-                                english: "PREFLIGHT"
-                                title: "GUI 前置检查"
-                            }
-
-                            ArkButton {
-                                text: "重新检查"
-                                implicitHeight: 34
-                                ghost: true
-                                onClicked: Runtime.refreshPrerequisites()
-                            }
-
-                            ArkButton {
-                                text: "检查网络"
-                                implicitHeight: 34
-                                ghost: true
-                                enabled: Runtime.networkStatus !== "checking"
-                                onClicked: Runtime.checkNetwork()
-                            }
+                        MdButton {
+                            text: "重新检测"
+                            variant: "text"
+                            onClicked: Adapter.checkEnvironment()
                         }
-
-                        Repeater {
-                            model: Runtime.prerequisites
-
-                            delegate: RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 10
-
-                                Rectangle {
-                                    width: 8
-                                    height: 8
-                                    color: modelData.ok ? Theme.colors.state : Theme.colors.danger
-                                }
-
-                                MicroLabel {
-                                    Layout.preferredWidth: 92
-                                    label: modelData.name
-                                    color: Theme.colors.paper2
-                                    microSize: 9
-                                    tracking: 1.0
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: modelData.detail
-                                    color: Theme.colors.muted
-                                    font.family: App.monoFontFamily
-                                    font.pixelSize: 11
-                                    elide: Text.ElideMiddle
-                                }
-
-                                MicroLabel {
-                                    label: modelData.hint
-                                    color: Theme.colors.disabled
-                                    microSize: 8
-                                    tracking: 0.6
-                                }
-
-                                ArkTag {
-                                    text: modelData.ok ? "OK" : "NG"
-                                    kind: modelData.ok ? "state" : "danger"
-                                    implicitHeight: 18
-                                }
-                            }
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            visible: Runtime.networkDetail.length > 0
-                            text: Runtime.networkDetail
-                            color: Runtime.networkStatus === "ok" ? Theme.colors.muted
-                                 : (Runtime.networkStatus === "error" ? Theme.colors.danger
-                                                                      : Theme.colors.muted)
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
+                        MdButton {
+                            text: "验证 CLI"
+                            variant: "text"
+                            onClicked: Adapter.verifyCli()
                         }
                     }
-                }
 
-                // 环境检测
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: envColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
 
-                    ColumnLayout {
-                        id: envColumn
-                        anchors.fill: parent
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            SectionHeader {
-                                Layout.fillWidth: true
-                                index: "02"
-                                english: "ENVIRONMENT"
-                                title: "Hyps 环境检测"
-                            }
-
-                            ArkButton {
-                                text: "重新检测"
-                                implicitHeight: 34
-                                enabled: Runtime.ready
-                                onClicked: Adapter.checkEnvironment()
-                            }
-
-                            ArkButton {
-                                text: page.showRaw ? "隐藏原始输出" : "原始输出"
-                                implicitHeight: 34
-                                ghost: true
-                                onClicked: page.showRaw = !page.showRaw
-                            }
+                        MdTag {
+                            text: "通过 " + EnvReport.requiredPassed + " / " + EnvReport.requiredTotal
+                            status: EnvReport.requiredFailed > 0 ? "error" : "success"
                         }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 12
-
-                            MicroLabel {
-                                label: EnvReport.hasReport ? EnvReport.summaryText : "尚未检测"
-                                color: Theme.colors.paper2
-                                microSize: 10
-                                tracking: 0.6
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                            }
-
-                            MicroLabel {
-                                label: EnvReport.checkedAtText
-                                color: Theme.colors.disabled
-                                microSize: 9
-                                tracking: 0.6
-                            }
+                        MdTag {
+                            visible: EnvReport.warnings > 0
+                            text: "警告 " + EnvReport.warnings
+                            status: "warning"
                         }
+                        MdTag {
+                            visible: EnvReport.configWarnings > 0
+                            text: "配置警告 " + EnvReport.configWarnings
+                            status: "warning"
+                        }
+                        MdTag {
+                            text: Adapter.cliVerified ? "CLI 已验证" : "CLI 未验证"
+                            status: Adapter.cliVerified ? "success" : "neutral"
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
 
-                        Repeater {
-                            model: EnvReport.groups
+                    Repeater {
+                        model: EnvReport.groups
 
-                            delegate: ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-                                Layout.topMargin: 4
+                        delegate: MdExpansionPanel {
+                            Layout.fillWidth: true
+                            title: modelData.title
+                            subtitle: (modelData.items ? modelData.items.length : 0) + " 项"
+                            expanded: index === 0
 
-                                MicroLabel {
-                                    label: modelData.title
-                                    color: Theme.colors.signal
-                                    microSize: 9
-                                    tracking: 1.4
-                                }
+                            Column {
+                                width: parent.width
+                                spacing: 6
 
                                 Repeater {
                                     model: modelData.items
 
                                     delegate: RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 10
+                                        width: parent.width
+                                        spacing: Md3.space.sm
 
-                                        Rectangle {
-                                            width: 6
-                                            height: 6
-                                            color: modelData.status === "ok" ? Theme.colors.state
-                                                 : (modelData.status === "warn" ? Theme.colors.warn
-                                                    : (modelData.status === "fail" ? Theme.colors.danger
-                                                                                   : Theme.colors.muted))
+                                        MdIcon {
+                                            name: modelData.status === "ok" ? "check-circle"
+                                                  : (modelData.status === "warn" ? "warning" : "error")
+                                            size: 16
+                                            color: modelData.status === "ok" ? Theme.colors.success
+                                                   : (modelData.status === "warn" ? Theme.colors.warning
+                                                                                  : Theme.colors.error)
                                         }
-
-                                        Text {
-                                            Layout.preferredWidth: 170
+                                        MdText {
+                                            role: "bodySmall"
                                             text: modelData.name
-                                            color: Theme.colors.paper2
-                                            font.family: App.uiFontFamily
-                                            font.pixelSize: 11
+                                            Layout.preferredWidth: 170
                                             elide: Text.ElideRight
                                         }
-
-                                        Text {
-                                            Layout.fillWidth: true
+                                        MdText {
+                                            role: "bodySmall"
+                                            mono: true
+                                            tone: "variant"
                                             text: modelData.detail
-                                            color: Theme.colors.muted
-                                            font.family: App.monoFontFamily
-                                            font.pixelSize: 10
-                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideMiddle
                                         }
                                     }
                                 }
                             }
                         }
+                    }
 
-                        TextArea {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 200
-                            visible: page.showRaw
-                            readOnly: true
-                            text: EnvReport.rawText
-                            color: Theme.colors.muted
-                            font.family: App.monoFontFamily
-                            font.pixelSize: 10
-                            selectByMouse: true
-                            wrapMode: TextArea.WrapAnywhere
-                            background: Rectangle {
-                                color: Theme.colors.codeBg
-                                border.width: 1
-                                border.color: Theme.colors.line
-                            }
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            visible: !EnvReport.hasReport
-                            text: "尚未运行环境检测。Hyps 组件就绪后点击「重新检测」。"
-                            color: Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                        }
+                    MdEmptyState {
+                        Layout.fillWidth: true
+                        visible: !EnvReport.hasReport
+                        iconName: "shield"
+                        title: "还没有检测结果"
+                        description: "检测会读取组件目录、运行器与依赖状态。"
+                        actionText: "开始检测"
+                        onActionClicked: Adapter.checkEnvironment()
                     }
                 }
+            }
 
-                // Hyps 组件更新
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: updateColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-                    accentColor: Runtime.updateAvailable ? Theme.colors.signal : Theme.colors.line
+            // 上游更新
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: updateColumn
-                        anchors.fill: parent
-                        spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
 
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "03"
-                            english: "COMPONENT UPDATE"
-                            title: "Hyps 组件更新"
+                    MdSectionHeader {
+                        title: "上游更新"
+                        caption: Runtime.updateStatusText
+
+                        MdTag {
+                            text: Runtime.updateAvailable ? "有更新" : "最新"
+                            status: Runtime.updateAvailable ? "primary" : "success"
                         }
+                    }
 
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "当前提交"
-                            value: Runtime.ready
-                                   ? Runtime.commitShort + "  " + Runtime.commitSubject : "—"
-                            wrap: true
+                    MdInfoRow {
+                        Layout.fillWidth: true
+                        label: "当前提交"
+                        value: Runtime.commitShort.length > 0
+                               ? Runtime.commitShort + "  " + Runtime.commitSubject
+                               : "—"
+                        mono: true
+                    }
+                    MdInfoRow {
+                        Layout.fillWidth: true
+                        label: "上游提交"
+                        value: Runtime.upstreamCommit.length > 0
+                               ? Runtime.upstreamCommit + "  " + Runtime.upstreamSubject
+                               : "—"
+                        mono: true
+                    }
+                    MdInfoRow {
+                        Layout.fillWidth: true
+                        label: "落后 / 领先"
+                        value: Runtime.behindCount + " / " + Runtime.aheadCount
+                        mono: true
+                    }
+
+                    MdProgressLinear {
+                        Layout.fillWidth: true
+                        visible: Runtime.busy
+                        value: Runtime.progress >= 0 && Runtime.progress <= 1 ? Runtime.progress : -1
+                    }
+
+                    MdText {
+                        Layout.fillWidth: true
+                        visible: Runtime.busy && Runtime.progressText.length > 0
+                        role: "bodySmall"
+                        tone: "variant"
+                        text: Runtime.progressText
+                    }
+
+                    MdBanner {
+                        Layout.fillWidth: true
+                        visible: Runtime.errorMessage.length > 0
+                        status: "error"
+                        text: Runtime.errorMessage
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
+
+                        MdButton {
+                            text: "检查更新"
+                            variant: "tonal"
+                            iconName: "refresh"
+                            enabled: !Runtime.busy
+                            onClicked: Runtime.checkForUpdates()
                         }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "当前分支"
-                            value: Runtime.ready ? Runtime.branch + (Runtime.dirty ? "  （有未提交修改）" : "  （工作区干净）")
-                                                 : "—"
-                            valueColor: Runtime.dirty ? Theme.colors.warn : Theme.colors.paper2
+                        MdButton {
+                            text: "应用更新"
+                            variant: "filled"
+                            iconName: "download"
+                            enabled: Runtime.updateAvailable && !Runtime.busy
+                            onClicked: Runtime.applyUpdate()
                         }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "上游提交"
-                            value: Runtime.upstreamCommit.length > 0
-                                   ? Runtime.upstreamCommit.substring(0, 12) + "  " + Runtime.upstreamSubject
-                                   : "尚未检查"
-                            wrap: true
+                        MdButton {
+                            visible: Runtime.busy
+                            text: "取消"
+                            variant: "outlined"
+                            iconName: "stop"
+                            onClicked: Runtime.cancelOperation()
                         }
+                        Item { Layout.fillWidth: true }
+                    }
 
-                        ArkProgress {
-                            Layout.fillWidth: true
-                            visible: Runtime.state === "updating" || Runtime.state === "verifying"
-                            indeterminate: Runtime.state === "updating"
-                            value: Runtime.progress
-                        }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 200
+                        visible: Runtime.logLines.length > 0
+                        radius: Md3.shape.small
+                        color: Theme.colors.codeSurface
+                        border.width: 1
+                        border.color: Theme.colors.outlineVariant
+                        clip: true
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: Runtime.updateStatusText
-                            color: Runtime.updateAvailable ? Theme.colors.signal : Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                            visible: text.length > 0
-                        }
+                        ListView {
+                            id: updateLog
+                            anchors.fill: parent
+                            anchors.margins: 8
+                            clip: true
+                            model: Runtime.logLines
+                            ScrollBar.vertical: MdScrollBar { }
+                            onCountChanged: Qt.callLater(function () { updateLog.positionViewAtEnd() })
 
-                        Text {
-                            Layout.fillWidth: true
-                            visible: Runtime.updateAvailable && Runtime.dirty
-                            text: "Hyps 组件存在未提交的修改，更新会被拒绝。Hyps Hub 不会执行 reset/clean，"
-                                  + "请先在组件目录中手动处理这些修改。"
-                            color: Theme.colors.warn
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            ArkButton {
-                                text: "检查更新"
-                                implicitHeight: 38
-                                enabled: Runtime.ready && !Runtime.busy
-                                onClicked: Runtime.checkForUpdates()
-                            }
-
-                            ArkButton {
-                                text: Runtime.behindCount > 0
-                                      ? "快进更新（" + Runtime.behindCount + "）" : "更新"
-                                implicitHeight: 38
-                                primary: true
-                                enabled: Runtime.updateAvailable && !Runtime.dirty && !Runtime.busy
-                                onClicked: Runtime.applyUpdate()
-                            }
-
-                            ArkButton {
-                                text: "打开组件目录"
-                                implicitHeight: 38
-                                ghost: true
-                                onClicked: AppControl.openDirectory(App.runtimeDir)
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            MicroLabel {
-                                label: "FETCH + MERGE --FF-ONLY / NO RESET"
-                                color: Theme.colors.disabled
-                                microSize: 8
-                                tracking: 0.8
+                            delegate: MdText {
+                                width: updateLog.width
+                                role: "bodySmall"
+                                mono: true
+                                text: modelData
+                                wrapMode: Text.WrapAnywhere
                             }
                         }
                     }
                 }
+            }
 
-                // 白名单诊断命令
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: commandsColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
+            // 诊断命令
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: commandsColumn
-                        anchors.fill: parent
-                        spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.xs
 
-                        SectionHeader {
+                    MdSectionHeader {
+                        title: "诊断命令"
+                        caption: "命令在任务页执行，输出会实时出现"
+                    }
+
+                    Repeater {
+                        model: Adapter.diagnosticActions
+
+                        delegate: RowLayout {
                             Layout.fillWidth: true
-                            index: "04"
-                            english: "COMMANDS"
-                            title: "诊断命令（白名单）"
-                        }
+                            spacing: Md3.space.md
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: "只允许执行下列经过验证的只读命令，执行结果会作为任务出现在「任务」页。"
-                            color: Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                        }
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 100000
+                                spacing: 0
 
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: 8
-
-                            Repeater {
-                                model: Adapter.diagnosticActions
-
-                                delegate: ArkButton {
+                                MdText {
+                                    role: "bodyMedium"
                                     text: modelData.title
-                                    implicitHeight: 36
-                                    enabled: Runtime.ready
-                                    onClicked: page.runAction(modelData.id)
+                                }
+                                MdText {
+                                    Layout.fillWidth: true
+                                    role: "bodySmall"
+                                    tone: "variant"
+                                    text: modelData.description
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            MdButton {
+                                text: "运行"
+                                variant: "outlined"
+                                onClicked: {
+                                    Adapter.runDiagnostic(modelData.id);
+                                    if (page.host) {
+                                        page.host.navigate("tasks");
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    MdText {
+                        Layout.fillWidth: true
+                        visible: Adapter.diagnosticActions.length === 0
+                        role: "bodySmall"
+                        tone: "variant"
+                        text: "组件未就绪，暂时没有可用的诊断命令。"
+                    }
+                }
+            }
+
+            // 导出诊断包
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
+
+                    MdSectionHeader {
+                        title: "导出诊断包"
+                        caption: "打包环境报表、配置与最近日志，便于排查问题"
+                    }
+
+                    MdPathField {
+                        Layout.fillWidth: true
+                        label: "导出目录"
+                        mode: "dir"
+                        text: page.exportDir
+                        onCommitted: function (path) { page.exportDir = path }
+                    }
+
+                    MdBanner {
+                        Layout.fillWidth: true
+                        visible: Diag.lastExportError.length > 0
+                        status: "error"
+                        text: Diag.lastExportError
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
+
+                        MdButton {
+                            text: "导出"
+                            variant: "filled"
+                            iconName: "download"
+                            onClicked: {
+                                const result = Diag.exportBundle(page.exportDir);
+                                if (result && result.ok) {
+                                    if (page.host) {
+                                        page.host.showToast("已导出：" + result.path);
+                                    }
+                                } else if (page.host) {
+                                    page.host.showToast("导出失败：" + (result && result.error
+                                                                        ? result.error
+                                                                        : Diag.lastExportError));
                                 }
                             }
                         }
 
-                        Repeater {
-                            model: Adapter.diagnosticActions
-
-                            delegate: MicroLabel {
-                                Layout.fillWidth: true
-                                label: modelData.id + " — " + modelData.description
-                                color: Theme.colors.disabled
-                                microSize: 8
-                                tracking: 0.5
-                                elide: Text.ElideRight
-                            }
+                        MdText {
+                            Layout.fillWidth: true
+                            role: "bodySmall"
+                            mono: true
+                            tone: "variant"
+                            text: Diag.lastExportPath
+                            elide: Text.ElideMiddle
                         }
                     }
                 }
+            }
 
-                // 导出
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: exportColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
+            // 原始报表
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: exportColumn
-                        anchors.fill: parent
-                        spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
 
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "05"
-                            english: "EXPORT"
-                            title: "导出诊断包"
-                        }
+                    MdSectionHeader {
+                        title: "原始报表"
+                        caption: "hyps doctor 的原始输出"
+                    }
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: "导出为目录：summary、环境检测原始输出、初始化记录、任务历史与日志尾部。"
-                                  + "疑似 token/password/secret 字段会被替换为 ***；不会包含游戏与 Hyps 组件文件。"
-                            color: Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            PathField {
-                                Layout.fillWidth: true
-                                value: page.exportDir
-                                mode: "dir"
-                                dialogTitle: "选择诊断包导出目录"
-                                onCommitted: function (path) { page.exportDir = path }
-                            }
-
-                            ArkButton {
-                                text: "导出诊断包"
-                                implicitHeight: 40
-                                primary: true
-                                onClicked: page.exportBundle()
-                            }
-
-                            ArkButton {
-                                text: "打开上次导出"
-                                implicitHeight: 40
-                                ghost: true
-                                enabled: Diag.lastExportPath.length > 0
-                                onClicked: AppControl.openDirectory(Diag.lastExportPath)
-                            }
-                        }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "上次导出"
-                            value: Diag.lastExportPath.length > 0 ? Diag.lastExportPath
-                                                                  : "尚未导出"
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            visible: Diag.lastExportError.length > 0
-                            text: Diag.lastExportError
-                            color: Theme.colors.danger
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                        }
+                    MdCodeBlock {
+                        Layout.fillWidth: true
+                        maxHeight: 280
+                        text: EnvReport.rawText.length > 0 ? EnvReport.rawText : "（还没有报表）"
                     }
                 }
-
-                Item { Layout.preferredHeight: 8 }
             }
         }
     }

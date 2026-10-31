@@ -5,13 +5,21 @@ import QtQuick.Window
 import HypsHub 1.0
 import "components"
 import "pages"
+import "theme/Md3.js" as Md3
 
+/*
+ * 应用外壳：MD3 导航轨 + 顶部应用栏 + 页面栈。
+ *
+ * 页面契约（pages/*.qml 都依赖它）：
+ *   property var host      -> 本窗口，页面通过 host.navigate(id) / host.showToast(text) 交互
+ *   Main 负责页面标题（顶部应用栏），页面内部不要再画一级标题。
+ */
 ApplicationWindow {
     id: window
 
     visible: true
     title: "Hyps Hub"
-    color: Theme.colors.ink
+    color: Theme.colors.surface
     width: 1180
     height: 760
     minimumWidth: 1040
@@ -19,15 +27,16 @@ ApplicationWindow {
 
     property string currentPage: "home"
     property bool quitHasUnsaved: false
+    property bool railExpanded: false
 
     readonly property var pageDefs: [
-        { id: "home", index: "01", label: "首页", english: "OVERVIEW", icon: "home" },
-        { id: "games", index: "02", label: "游戏", english: "GAMES", icon: "games" },
-        { id: "tasks", index: "03", label: "任务", english: "TASKS", icon: "tasks" },
-        { id: "config", index: "04", label: "配置", english: "CONFIG", icon: "config" },
-        { id: "diagnostics", index: "05", label: "诊断", english: "DIAGNOSTICS", icon: "diagnostics" },
-        { id: "settings", index: "06", label: "设置", english: "SETTINGS", icon: "settings" },
-        { id: "about", index: "07", label: "关于", english: "ABOUT", icon: "about" }
+        { id: "home", label: "首页", english: "OVERVIEW", icon: "home" },
+        { id: "games", label: "游戏", english: "GAMES", icon: "games" },
+        { id: "tasks", label: "任务", english: "TASKS", icon: "tasks" },
+        { id: "config", label: "配置", english: "CONFIG", icon: "config" },
+        { id: "diagnostics", label: "诊断", english: "DIAGNOSTICS", icon: "diagnostics" },
+        { id: "settings", label: "设置", english: "SETTINGS", icon: "settings" },
+        { id: "about", label: "关于", english: "ABOUT", icon: "about" }
     ]
 
     property int currentIndex: {
@@ -39,19 +48,25 @@ ApplicationWindow {
         return 0;
     }
 
+    readonly property var currentDef: pageDefs[Math.max(0, currentIndex)]
+
     function navigate(pageId) {
         if (!pageId || pageId.length === 0) {
             return;
         }
+        if (window.currentPage === pageId) {
+            return;
+        }
         window.currentPage = pageId;
         Settings.lastPage = pageId;
+        pageFade.restart();
     }
 
     function showToast(message) {
         if (!message || message.length === 0) {
             return;
         }
-        toast.show(message);
+        snackbar.show(message);
     }
 
     function saveGeometry() {
@@ -131,10 +146,6 @@ ApplicationWindow {
     Item {
         anchors.fill: parent
 
-        GridBackdrop {
-            anchors.fill: parent
-        }
-
         // 主界面
         Item {
             anchors.fill: parent
@@ -144,10 +155,11 @@ ApplicationWindow {
                 anchors.fill: parent
                 spacing: 0
 
-                NavRail {
+                MdNavRail {
                     Layout.fillHeight: true
                     currentPage: window.currentPage
                     pages: window.pageDefs
+                    badges: ({ "tasks": Tasks.activeCount })
                     runtimeReady: Runtime.ready
                     version: "v" + App.appVersion
                     onNavigate: function (pageId) { window.navigate(pageId) }
@@ -158,24 +170,78 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     spacing: 0
 
-                    TopBar {
+                    MdTopAppBar {
                         Layout.fillWidth: true
-                        pageTitle: window.currentPage
-                        pageEnglish: window.pageDefs[window.currentIndex].english
+                        title: window.currentDef.label
+                        subtitle: window.currentDef.english
+
+                        MdTag {
+                            text: EnvReport.hasReport
+                                  ? ("ENV " + EnvReport.requiredPassed + "/" + EnvReport.requiredTotal)
+                                  : "ENV —"
+                            status: EnvReport.hasReport
+                                    ? (EnvReport.requiredFailed > 0 ? "error" : "success")
+                                    : "neutral"
+                        }
+
+                        MdTag {
+                            visible: Runtime.updateAvailable
+                            text: "可更新 " + Runtime.behindCount
+                            status: "primary"
+                            iconName: "download"
+                        }
+
+                        MdTag {
+                            text: Runtime.ready ? "组件就绪" : "组件缺失"
+                            status: Runtime.ready ? "success" : "error"
+                            iconName: "git"
+                        }
+
+                        MdButton {
+                            text: "检查环境"
+                            variant: "tonal"
+                            iconName: "refresh"
+                            enabled: Runtime.ready
+                            onClicked: Adapter.checkEnvironment()
+                        }
                     }
 
-                    StackLayout {
+                    Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        currentIndex: window.currentIndex
+                        clip: true
 
-                        HomePage { host: window }
-                        GamesPage { host: window }
-                        TasksPage { host: window }
-                        ConfigPage { host: window }
-                        DiagnosticsPage { host: window }
-                        SettingsPage { host: window }
-                        AboutPage { host: window }
+                        StackLayout {
+                            id: pageStack
+                            anchors.fill: parent
+                            currentIndex: window.currentIndex
+
+                            HomePage { host: window }
+                            GamesPage { host: window }
+                            TasksPage { host: window }
+                            ConfigPage { host: window }
+                            DiagnosticsPage { host: window }
+                            SettingsPage { host: window }
+                            AboutPage { host: window }
+                        }
+
+                        SequentialAnimation {
+                            id: pageFade
+                            NumberAnimation {
+                                target: pageStack
+                                property: "opacity"
+                                to: 0.35
+                                duration: Md3.motion.short3
+                                easing.type: Easing.OutCubic
+                            }
+                            NumberAnimation {
+                                target: pageStack
+                                property: "opacity"
+                                to: 1
+                                duration: Md3.motion.medium2
+                                easing.type: Easing.OutCubic
+                            }
+                        }
                     }
                 }
             }
@@ -187,67 +253,18 @@ ApplicationWindow {
             visible: !Runtime.ready
             host: window
         }
-
-        // Toast
-        Rectangle {
-            id: toast
-
-            property string message: ""
-
-            width: Math.min(640, toastText.implicitWidth + 52)
-            height: 46
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            anchors.leftMargin: 20
-            anchors.bottomMargin: 20
-            color: Theme.colors.ink2
-            border.width: 1
-            border.color: Theme.colors.lineHover
-            opacity: 0
-            visible: opacity > 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
-            }
-
-            Rectangle {
-                x: 0
-                y: 8
-                width: 2
-                height: parent.height - 16
-                color: Theme.colors.signal
-            }
-
-            Text {
-                id: toastText
-                anchors.fill: parent
-                anchors.leftMargin: 18
-                anchors.rightMargin: 14
-                text: toast.message
-                color: Theme.colors.paper2
-                font.family: App.uiFontFamily
-                font.pixelSize: 12
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
-            }
-
-            Timer {
-                id: toastTimer
-                interval: 4200
-                onTriggered: toast.opacity = 0
-            }
-
-            function show(text) {
-                message = text;
-                opacity = 1;
-                toastTimer.restart();
-            }
-        }
     }
 
-    ConfirmDialog {
+    MdSnackbar {
+        id: snackbar
+        // Snackbar 是 Popup：只支持 x/y，不支持 anchors。
+        x: Runtime.ready ? (window.railExpanded ? 280 : 104) : 24
+        y: window.height - height - 24
+    }
+
+    MdConfirmDialog {
         id: quitDialog
-        title: window.quitHasUnsaved && Tasks.activeCount > 0
+        heading: window.quitHasUnsaved && Tasks.activeCount > 0
                    ? "有未保存的配置，且任务仍在运行"
                    : (window.quitHasUnsaved ? "有未保存的配置" : "仍有任务正在运行")
         message: {
@@ -262,7 +279,7 @@ ApplicationWindow {
             return parts.join("\n\n");
         }
         confirmText: window.quitHasUnsaved && Tasks.activeCount > 0
-                         ? "取消任务、放弃修改并退出"
+                         ? "取消任务并退出"
                          : (window.quitHasUnsaved ? "放弃修改并退出" : "取消任务并退出")
         cancelText: "返回"
         danger: true

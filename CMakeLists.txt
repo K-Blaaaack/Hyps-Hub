@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(HypsHub
-    VERSION 0.3.0
+    VERSION 0.4.0
     DESCRIPTION "Hyps Hub - a native Linux desktop client for the Hyps CLI"
     HOMEPAGE_URL "https://github.com/K-Blaaaack/Hyps-Hub"
     LANGUAGES CXX
@@ -137,33 +137,54 @@ target_link_libraries(hyps-hub PRIVATE hyps-hub-core Qt6::Widgets)
 # ---------------------------------------------------------------------------
 set(HYPS_HUB_QML
     qml/Main.qml
+    qml/theme/Md3.js
 
-    qml/components/MicroLabel.qml
-    qml/components/ChamferedPanel.qml
-    qml/components/StripeRuler.qml
-    qml/components/ArkButton.qml
-    qml/components/ArkTag.qml
-    qml/components/ArkProgress.qml
-    qml/components/GridBackdrop.qml
-    qml/components/PageHeader.qml
-    qml/components/SectionHeader.qml
-    qml/components/ToggleSwitch.qml
-    qml/components/ToggleRow.qml
-    qml/components/ConfigField.qml
-    qml/components/CodeEditor.qml
-    qml/components/RawEditorDialog.qml
-    qml/components/PathField.qml
-    qml/components/FilePicker.qml
-    qml/components/LogView.qml
-    qml/components/EmptyState.qml
-    qml/components/ConfirmDialog.qml
-    qml/components/TaskItem.qml
-    qml/components/InfoRow.qml
-    qml/components/ValidationList.qml
-    qml/components/StatCard.qml
-    qml/components/NavIcon.qml
-    qml/components/NavRail.qml
-    qml/components/TopBar.qml
+    qml/components/MdBadge.qml
+    qml/components/MdBanner.qml
+    qml/components/MdBrandMark.qml
+    qml/components/MdButton.qml
+    qml/components/MdCard.qml
+    qml/components/MdCheckbox.qml
+    qml/components/MdChip.qml
+    qml/components/MdCodeBlock.qml
+    qml/components/MdCodeField.qml
+    qml/components/MdConfirmDialog.qml
+    qml/components/MdDialog.qml
+    qml/components/MdDivider.qml
+    qml/components/MdEmptyState.qml
+    qml/components/MdExpansionPanel.qml
+    qml/components/MdFab.qml
+    qml/components/MdField.qml
+    qml/components/MdFilePicker.qml
+    qml/components/MdIcon.qml
+    qml/components/MdIconButton.qml
+    qml/components/MdInfoRow.qml
+    qml/components/MdListItem.qml
+    qml/components/MdLogView.qml
+    qml/components/MdMenu.qml
+    qml/components/MdMenuItem.qml
+    qml/components/MdNavRail.qml
+    qml/components/MdPathField.qml
+    qml/components/MdProgressCircular.qml
+    qml/components/MdProgressLinear.qml
+    qml/components/MdRadioButton.qml
+    qml/components/MdRawEditorDialog.qml
+    qml/components/MdScrollBar.qml
+    qml/components/MdSearchField.qml
+    qml/components/MdSectionHeader.qml
+    qml/components/MdSegmentedButton.qml
+    qml/components/MdSelect.qml
+    qml/components/MdSnackbar.qml
+    qml/components/MdStatCard.qml
+    qml/components/MdSwitch.qml
+    qml/components/MdSwitchRow.qml
+    qml/components/MdTag.qml
+    qml/components/MdTaskItem.qml
+    qml/components/MdText.qml
+    qml/components/MdTextField.qml
+    qml/components/MdTooltip.qml
+    qml/components/MdTopAppBar.qml
+    qml/components/MdValidationList.qml
 
     qml/pages/OnboardingPage.qml
     qml/pages/HomePage.qml
@@ -185,8 +206,8 @@ qt_add_resources(hyps-hub "hyps-hub-assets"
     PREFIX "/"
     FILES
         assets/hyps-hub.svg
-        assets/noise.png
-        assets/stripe.png
+        assets/hyps-hub-light.svg
+        assets/hyps-hub-tile.svg
 )
 
 # ---------------------------------------------------------------------------
@@ -198,8 +219,12 @@ install(FILES packaging/hyps-hub.desktop
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
 )
 
-install(FILES assets/hyps-hub.svg
+# 桌面/任务栏图标装方形容器版（自带底色，压在任意壁纸上都成立），
+# 并按 hyps-hub.svg 命名，packaging/hyps-hub.desktop 里的 Icon=hyps-hub 才能命中。
+# 应用内的透明底标识只从 qrc 加载，不需要安装。
+install(FILES assets/hyps-hub-tile.svg
     DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+    RENAME hyps-hub.svg
 )
 
 install(FILES

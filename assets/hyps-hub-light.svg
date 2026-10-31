@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Hyps Hub · H 字标（MD3 浅色主题 primary #6750a4），构图居中 -->
+  <g fill="#6750a4">
+    <rect x="58" y="54" width="34" height="148" rx="17"/>
+    <rect x="164" y="54" width="34" height="148" rx="17"/>
+    <rect x="58" y="111" width="140" height="34" rx="17"/>
+  </g>
+</svg>

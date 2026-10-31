@@ -1,410 +1,274 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls
 import HypsHub 1.0
 import "../components"
+import "../theme/Md3.js" as Md3
 
-/* 设置：外观、通知、高级模式、运行环境、关于与隐私 */
+/* 设置页：外观、通知、高级模式、目录、环境信息、窗口。 */
 Item {
     id: page
 
     property var host
 
-    readonly property var themeChoices: [
-        { key: "system", label: "跟随系统" },
-        { key: "light", label: "浅色" },
-        { key: "dark", label: "深色" }
-    ]
-
     Flickable {
-        id: scroll
         anchors.fill: parent
         clip: true
         contentWidth: width
-        contentHeight: content.implicitHeight + 44
+        contentHeight: content.implicitHeight + Md3.space.xl * 2
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AlwaysOn }
+        ScrollBar.vertical: MdScrollBar { }
 
-        Item {
-            width: scroll.width
-            height: content.implicitHeight + 44
+        ColumnLayout {
+            id: content
+            width: Math.min(1100, page.width - Md3.space.xl * 2)
+            x: Md3.space.xl
+            y: Md3.space.lg
+            spacing: Md3.space.xl
 
-            ColumnLayout {
-                id: content
-                x: 24
-                y: 20
-                width: parent.width - 48
-                spacing: 14
+            MdBanner {
+                Layout.fillWidth: true
+                visible: Settings.loadWarning.length > 0
+                status: "warning"
+                text: Settings.loadWarning
+            }
 
-                PageHeader {
-                    Layout.fillWidth: true
-                    index: "06"
-                    title: "设置"
-                    english: "SETTINGS"
-                    subtitle: "APPEARANCE / ENVIRONMENT / PRIVACY"
+            MdBanner {
+                Layout.fillWidth: true
+                visible: App.runningAsRoot
+                status: "warning"
+                text: "当前以 root 身份运行。GUI 与游戏配置不需要 root 权限，建议用普通用户启动。"
+            }
 
-                    ArkButton {
-                        text: "关于 Hyps Hub"
-                        implicitHeight: 40
-                        ghost: true
-                        onClicked: page.host.navigate("about")
+            // 外观
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.md
+
+                    MdSectionHeader {
+                        title: "外观"
+                        caption: "MD3 基线配色，浅色/深色两套完整语义色"
                     }
 
-                    ArkButton {
-                        text: "打开配置目录"
-                        implicitHeight: 40
-                        ghost: true
-                        onClicked: AppControl.openDirectory(App.configDir)
-                    }
-                }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.lg
 
-                // 外观
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: appearanceColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-
-                    ColumnLayout {
-                        id: appearanceColumn
-                        anchors.fill: parent
-                        spacing: 10
-
-                        SectionHeader {
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            index: "01"
-                            english: "APPEARANCE"
-                            title: "外观"
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "默认跟随系统 color-scheme。深色模式使用方舟设计的近黑墨底、纸阶文字与单一青色信号；"
-                                  + "浅色模式保持同一套零圆角与切角几何，只反转墨/纸阶。"
-                            color: Theme.colors.muted
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            wrapMode: Text.WordWrap
-                        }
-
-                        RowLayout {
-                            spacing: 8
-
-                            Repeater {
-                                model: page.themeChoices
-
-                                delegate: ArkButton {
-                                    text: modelData.label
-                                    implicitHeight: 38
-                                    primary: Theme.preference === modelData.key
-                                    ghost: Theme.preference !== modelData.key
-                                    onClicked: Theme.preference = modelData.key
-                                }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            MicroLabel {
-                                label: Theme.dark ? "DARK / ARK TOKENS" : "LIGHT / ARK TOKENS"
-                                color: Theme.colors.signal
-                                microSize: 9
-                                tracking: 1.2
+                            Layout.maximumWidth: 100000
+                            spacing: 2
+                            MdText { role: "bodyLarge"; text: "主题" }
+                            MdText {
+                                role: "bodySmall"
+                                tone: "variant"
+                                text: "当前生效：" + (Theme.dark ? "深色" : "浅色")
+                                      + (Theme.preference === "system"
+                                         ? "（跟随系统" + (Theme.systemDark ? "，系统为深色" : "，系统为浅色") + "）"
+                                         : "（手动指定）")
                             }
                         }
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Rectangle { width: 28; height: 12; color: Theme.colors.ink }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.ink2 }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.ink3 }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.line }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.signal }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.state }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.warn }
-                            Rectangle { width: 28; height: 12; color: Theme.colors.danger }
-                            MicroLabel {
-                                label: "INK / LINE / SIGNAL / STATE / WARN / DANGER"
-                                color: Theme.colors.disabled
-                                microSize: 8
-                                tracking: 0.8
+                        MdSegmentedButton {
+                            model: [
+                                { value: "system", text: "跟随系统" },
+                                { value: "light", text: "浅色" },
+                                { value: "dark", text: "深色" }
+                            ]
+                            currentValue: Theme.preference
+                            onActivated: function (value) {
+                                // preference 是 WRITE 属性，只能赋值，不能当方法调
+                                Theme.preference = value;
+                                Settings.theme = value;
                             }
                         }
                     }
                 }
+            }
 
-                // 通知与行为
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: behaviorColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
+            // 行为
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: behaviorColumn
-                        anchors.fill: parent
-                        spacing: 10
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
 
-                        SectionHeader {
+                    MdSectionHeader { title: "行为" }
+
+                    MdSwitchRow {
+                        Layout.fillWidth: true
+                        title: "任务完成通知"
+                        description: "任务结束且窗口不在前台时发送系统通知"
+                        checked: Settings.notificationsEnabled
+                        onToggled: function (value) { Settings.notificationsEnabled = value }
+                    }
+
+                    MdDivider { Layout.fillWidth: true; inset: true }
+
+                    MdSwitchRow {
+                        Layout.fillWidth: true
+                        title: "高级模式"
+                        description: "在配置页显示原始编辑器、在诊断页显示诊断命令"
+                        checked: Settings.advancedMode
+                        onToggled: function (value) { Settings.advancedMode = value }
+                    }
+                }
+            }
+
+            // 目录
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.xs
+
+                    MdSectionHeader {
+                        title: "目录"
+                        caption: "遵循 XDG 规范，可用环境变量覆盖"
+                    }
+
+                    Repeater {
+                        model: [
+                            { label: "数据目录", value: App.dataDir },
+                            { label: "配置目录", value: App.configDir },
+                            { label: "状态目录", value: App.stateDir },
+                            { label: "缓存目录", value: App.cacheDir },
+                            { label: "日志目录", value: App.logsDir },
+                            { label: "任务日志", value: App.tasksLogDir },
+                            { label: "组件根目录", value: App.runtimeRoot },
+                            { label: "Hyps 配置", value: App.hypsConfigDir }
+                        ]
+
+                        delegate: RowLayout {
                             Layout.fillWidth: true
-                            index: "02"
-                            english: "BEHAVIOR"
-                            title: "通知与行为"
-                        }
+                            spacing: Md3.space.sm
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 14
-
-                            ColumnLayout {
+                            MdInfoRow {
                                 Layout.fillWidth: true
-                                spacing: 2
-
-                                Text {
-                                    text: "桌面通知"
-                                    color: Theme.colors.paper2
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 13
-                                }
-
-                                MicroLabel {
-                                    label: Notifier.available
-                                           ? "D-BUS org.freedesktop.Notifications 可用；仅窗口不在前台时提示任务结束"
-                                           : "当前会话没有可用的通知服务，将静默跳过"
-                                    color: Notifier.available ? Theme.colors.muted
-                                                              : Theme.colors.warn
-                                    microSize: 9
-                                    tracking: 0.6
-                                }
+                                label: modelData.label
+                                value: modelData.value
+                                mono: true
+                                copyable: true
+                                onCopyRequested: AppControl.copyToClipboard(modelData.value)
                             }
 
-                            ToggleSwitch {
-                                checked: Settings.notificationsEnabled
-                                onToggled: function (value) {
-                                    Settings.notificationsEnabled = value;
-                                }
-                            }
-                        }
-
-                        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.colors.rule }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 14
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                Text {
-                                    text: "高级模式"
-                                    color: Theme.colors.paper2
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 13
-                                }
-
-                                MicroLabel {
-                                    label: "在配置页展开环境变量与原始编辑器；默认折叠，避免普通用户面对大量参数"
-                                    color: Theme.colors.muted
-                                    microSize: 9
-                                    tracking: 0.6
-                                }
-                            }
-
-                            ToggleSwitch {
-                                checked: Settings.advancedMode
-                                onToggled: function (value) {
-                                    Settings.advancedMode = value;
-                                }
-                            }
-                        }
-
-                        Rectangle { Layout.fillWidth: true; height: 1; color: Theme.colors.rule }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 14
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                Text {
-                                    text: "窗口状态"
-                                    color: Theme.colors.paper2
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 13
-                                }
-
-                                MicroLabel {
-                                    label: "退出时保存窗口大小与最大化状态；Wayland 下窗口位置由合成器决定"
-                                    color: Theme.colors.muted
-                                    microSize: 9
-                                    tracking: 0.6
-                                }
-                            }
-
-                            MicroLabel {
-                                label: page.host.width + " × " + page.host.height
-                                color: Theme.colors.disabled
-                                microSize: 9
-                                tracking: 0.8
+                            MdIconButton {
+                                iconName: "external"
+                                size: 32
+                                iconSize: 16
+                                tooltip: "在文件管理器中打开"
+                                onClicked: AppControl.openDirectory(modelData.value)
                             }
                         }
                     }
                 }
+            }
 
-                // 运行环境
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: runtimeColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
+            // 环境
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: runtimeColumn
-                        anchors.fill: parent
-                        spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.xs
 
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "03"
-                            english: "COMPONENT"
-                            title: "Hyps 组件"
-                        }
+                    MdSectionHeader { title: "运行环境" }
 
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "Hyps 组件"
-                            value: App.runtimeDir
-                            wrap: true
-                        }
+                    GridLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        columns: content.width > 720 ? 2 : 1
+                        columnSpacing: Md3.space.xl
+                        rowSpacing: 0
 
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "提交"
-                            value: Runtime.ready
-                                   ? Runtime.commitShort + "  " + Runtime.commitSubject : "尚未就绪"
-                            wrap: true
-                        }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "CLI 入口"
-                            value: App.cliEntryPoint
-                            wrap: true
-                        }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "上游仓库"
-                            value: "https://github.com/MoYingJi/Hyps"
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-
-                            ArkButton {
-                                text: "打开组件目录"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: AppControl.openDirectory(App.runtimeDir)
-                            }
-
-                            ArkButton {
-                                text: "检查更新"
-                                implicitHeight: 36
-                                ghost: true
-                                enabled: Runtime.ready && !Runtime.busy
-                                onClicked: {
-                                    Runtime.checkForUpdates();
-                                    page.host.navigate("diagnostics");
-                                }
-                            }
-
-                            ArkButton {
-                                text: "查看环境诊断"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: page.host.navigate("diagnostics")
-                            }
-
-                            Item { Layout.fillWidth: true }
-                        }
+                        MdInfoRow { Layout.fillWidth: true; label: "界面字体"; value: App.uiFontFamily; mono: true }
+                        MdInfoRow { Layout.fillWidth: true; label: "等宽字体"; value: App.monoFontFamily; mono: true }
+                        MdInfoRow { Layout.fillWidth: true; label: "Qt"; value: App.qtVersion; mono: true }
+                        MdInfoRow { Layout.fillWidth: true; label: "内核"; value: App.kernelVersion; mono: true }
+                        MdInfoRow { Layout.fillWidth: true; label: "发行版"; value: App.osPrettyName }
+                        MdInfoRow { Layout.fillWidth: true; label: "会话"; value: App.sessionType }
+                        MdInfoRow { Layout.fillWidth: true; label: "桌面"; value: App.desktopName.length > 0 ? App.desktopName : "—" }
+                        MdInfoRow { Layout.fillWidth: true; label: "Wayland"; value: App.wayland ? "是" : "否" }
                     }
                 }
+            }
 
-                // 隐私与退出
-                ChamferedPanel {
-                    Layout.fillWidth: true
-                    implicitHeight: privacyColumn.implicitHeight + 36
-                    contentMargin: 18
-                    cut: 10
-                    accentColor: Theme.colors.danger
+            // 窗口
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
 
-                    ColumnLayout {
-                        id: privacyColumn
-                        anchors.fill: parent
-                        spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.sm
 
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "04"
-                            english: "PRIVACY"
-                            title: "数据与退出"
-                        }
+                    MdSectionHeader { title: "窗口" }
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: "GUI 配置位于 " + App.configDir + "，Hyps CLI 配置位于 "
-                                  + App.hypsConfigDir + "。卸载应用不会删除 Hyps 组件、配置与日志；"
-                                  + "如需彻底清理请手动删除 XDG 目录。"
-                            color: Theme.colors.paper2
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 11
-                            lineHeight: 1.45
-                            wrapMode: Text.WordWrap
-                        }
-
-                        RowLayout {
-                            spacing: 8
-
-                            ArkButton {
-                                text: "打开数据目录"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: AppControl.openDirectory(App.dataDir)
+                    MdInfoRow {
+                        Layout.fillWidth: true
+                        label: "上次几何"
+                        value: {
+                            const g = Settings.windowGeometry();
+                            if (!g || g.width === undefined) {
+                                return "未记录";
                             }
+                            return g.width + " × " + g.height + "  @ " + g.x + "," + g.y
+                                   + (g.maximized ? "（最大化）" : "");
+                        }
+                        mono: true
+                    }
 
-                            ArkButton {
-                                text: "打开日志目录"
-                                implicitHeight: 36
-                                ghost: true
-                                onClicked: AppControl.openDirectory(App.logsDir)
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            ArkButton {
-                                text: "退出 Hyps Hub"
-                                implicitHeight: 36
-                                danger: true
-                                onClicked: {
-                                    if (Tasks.activeCount > 0) {
-                                        page.host.confirmQuit();
-                                    } else {
-                                        AppControl.quitApplication();
-                                    }
+                    RowLayout {
+                        spacing: Md3.space.sm
+                        MdButton {
+                            text: "恢复默认尺寸"
+                            variant: "tonal"
+                            iconName: "refresh"
+                            onClicked: {
+                                Settings.saveWindowGeometry(80, 80, 1180, 760, false);
+                                if (page.host) {
+                                    page.host.showToast("已重置窗口几何，重启后生效");
                                 }
                             }
                         }
+                        Item { Layout.fillWidth: true }
                     }
                 }
+            }
 
-                Item { Layout.preferredHeight: 8 }
+            // 退出
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 100000
+                spacing: Md3.space.sm
+                Item { Layout.fillWidth: true }
+                MdButton {
+                    text: "退出应用"
+                    variant: "outlined"
+                    danger: true
+                    iconName: "power"
+                    onClicked: quitDialog.open()
+                }
             }
         }
+    }
+
+    MdConfirmDialog {
+        id: quitDialog
+        heading: "退出 Hyps Hub？"
+        message: "正在运行的任务会被一并取消。"
+        confirmText: "退出"
+        danger: true
+        onAccepted: AppControl.quitApplication()
     }
 }

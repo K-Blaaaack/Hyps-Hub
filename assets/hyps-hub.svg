@@ -1,14 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- Hyps Hub · 原创几何标识（Ark 设计语言：近黑墨底 / 单一青色信号 / 45° 切角） -->
-  <rect width="256" height="256" fill="#080a0b"/>
-  <path d="M28 60 L60 28 H228 V196 L196 228 H28 Z" fill="none" stroke="#333b3f" stroke-width="4"/>
-  <path d="M28 60 H64 M28 60 V96" fill="none" stroke="#18d1ff" stroke-width="4"/>
-  <path d="M196 228 H228 V196" fill="none" stroke="#18d1ff" stroke-width="4"/>
-  <g stroke="#f4f6f6" stroke-width="16" stroke-linecap="square">
-    <path d="M92 80 V176"/>
-    <path d="M156 80 V176"/>
-    <path d="M92 128 H156"/>
+  <!-- Hyps Hub · H 字标（MD3 主题色 primary #d0bcff），构图居中 -->
+  <g fill="#d0bcff">
+    <rect x="58" y="54" width="34" height="148" rx="17"/>
+    <rect x="164" y="54" width="34" height="148" rx="17"/>
+    <rect x="58" y="111" width="140" height="34" rx="17"/>
   </g>
-  <path d="M174 100 L210 128 L174 156 Z" fill="#18d1ff"/>
-  <rect x="196" y="60" width="12" height="12" fill="#c8eb21"/>
 </svg>

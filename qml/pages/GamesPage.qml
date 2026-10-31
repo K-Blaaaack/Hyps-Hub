@@ -1,926 +1,644 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls
 import HypsHub 1.0
 import "../components"
+import "../theme/Md3.js" as Md3
 
-/* 游戏配置与启动：读取隔离 CONFIG_DIR，启动仍调用上游 scripts/<Game>.sh */
+/* 游戏页：左栏游戏列表 + 右栏配置编辑与启动。 */
 Item {
     id: page
 
     property var host
-    property string selectedSlug: ""
-    property string pendingSlug: ""
-    property var gameInfo: ({})
-    property var gameCfg: selectedSlug.length > 0 ? Configs.gameConfig(selectedSlug) : null
-    property var issues: []
-    property bool advanced: false
+    property string currentSlug: ""
+    property string activeSlug: ""
+    property var fieldGroups: []
 
-    /* 字段定义来自 Configs.gameFieldsFor(selectedSlug)：基础字段 + 该游戏专属字段。
-     * 缓存成普通属性，保证 Repeater 的 model 在切换游戏后重新求值。 */
-    property var fieldList: []
-    property var basicFields: []
-    property var advancedFields: []
-    property var surrogateFields: []
-
-    function syncGameInfo() {
-        gameInfo = selectedSlug.length > 0 ? Games.gameBySlug(selectedSlug) : ({});
+    // 模型是异步扫描的；用命令式同步，避免把 Games.count 放进绑定（会与刷新信号互相触发）
+    function syncActiveSlug() {
+        const next = page.activeSlug.length > 0
+                ? page.currentSlug
+                : (Games.count > 0 ? Games.firstSlug() : "");
+        if (next !== page.activeSlug) {
+            page.activeSlug = next;
+            page.refreshGroups();
+        }
     }
 
-    function refreshFields() {
-        let list = null;
-        if (page.selectedSlug.length > 0) {
-            try {
-                /* C++ 契约：基础字段 + 该游戏专属字段（endfield 额外带「终末地替身」组） */
-                list = Configs.gameFieldsFor(page.selectedSlug);
-            } catch (error) {
-                /* gameFieldsFor 尚未就绪时退回基础字段，避免运行期报错 */
-                list = Configs.gameFields;
+    function collectGroups(fields) {
+        const seen = [];
+        const list = fields ? fields : [];
+        for (let i = 0; i < list.length; ++i) {
+            const group = list[i].group !== undefined && list[i].group !== null
+                    ? String(list[i].group) : "其它";
+            if (seen.indexOf(group) < 0) {
+                seen.push(group);
             }
         }
-        page.fieldList = list ? list : [];
-        page.basicFields = page.fieldsFor("基础");
-        page.advancedFields = page.fieldsFor("高级");
-        page.surrogateFields = page.fieldsFor("终末地替身");
+        return seen;
     }
 
-    function refreshIssues() {
-        issues = selectedSlug.length > 0 ? Configs.validateGame(selectedSlug) : [];
+    function refreshGroups() {
+        page.fieldGroups = page.collectGroups(
+            page.activeSlug.length > 0 ? Configs.gameFieldsFor(page.activeSlug) : []);
     }
 
-    function selectGame(slug) {
-        if (slug === page.selectedSlug) {
+    function fieldsIn(group) {
+        const list = page.activeSlug.length > 0 ? Configs.gameFieldsFor(page.activeSlug) : [];
+        const out = [];
+        for (let i = 0; i < list.length; ++i) {
+            const name = list[i].group !== undefined && list[i].group !== null
+                    ? String(list[i].group) : "其它";
+            if (name === group) {
+                out.push(list[i]);
+            }
+        }
+        return out;
+    }
+
+    function gameConfig() {
+        return page.activeSlug.length > 0 ? Configs.gameConfig(page.activeSlug) : null;
+    }
+
+    function gameInfo() {
+        return page.activeSlug.length > 0 ? Games.gameBySlug(page.activeSlug) : ({});
+    }
+
+    function select(slug) {
+        page.currentSlug = slug;
+    }
+
+    function saveGame() {
+        const config = page.gameConfig();
+        if (!config) {
             return;
         }
-        page.selectedSlug = slug;
-        page.syncGameInfo();
-        page.refreshIssues();
-    }
-
-    function doSave() {
-        if (!page.gameCfg) {
-            return false;
-        }
-        const result = page.gameCfg.save();
-        if (result.ok) {
-            page.host.showToast(result.backup
-                                ? "已保存，原文件备份为 " + result.backup
-                                : "已保存");
-            Games.refresh();
-            page.refreshIssues();
-            return true;
-        }
-        page.host.showToast("保存失败：" + result.error);
-        return false;
-    }
-
-    function trySave() {
-        if (!page.gameCfg) {
-            return;
-        }
-        if (!page.gameCfg.dirty) {
-            page.host.showToast("没有需要保存的修改");
-            return;
-        }
-        if (page.issues.length > 0) {
-            saveDialog.open();
-        } else {
-            page.doSave();
+        const result = config.save();
+        if (result && result.ok) {
+            if (page.host) {
+                page.host.showToast(result.backup && result.backup.length > 0
+                                    ? "已保存，备份：" + result.backup
+                                    : (result.message ? result.message : "已保存"));
+            }
+        } else if (page.host) {
+            page.host.showToast("保存失败：" + (result && result.error ? result.error : "未知错误"));
         }
     }
 
     function launch() {
-        if (!page.gameCfg || page.gameCfg.dirty) {
-            page.host.showToast("请先保存配置再启动");
-            return;
-        }
-        const task = Adapter.launchGame(page.selectedSlug, page.gameInfo.label
-                                                            ? page.gameInfo.label : page.selectedSlug);
-        if (!task) {
-            page.host.showToast("无法启动：" + Adapter.lastError);
-            return;
-        }
-        Tasks.select(task.id);
-        page.host.navigate("tasks");
-    }
-
-    function fieldsFor(group) {
-        const all = page.fieldList;
-        const result = [];
-        for (let i = 0; i < all.length; ++i) {
-            if (String(all[i].group) === group) {
-                result.push(all[i]);
+        const info = page.gameInfo();
+        const guard = Adapter.canLaunch(page.activeSlug);
+        if (guard && guard.ok === false) {
+            if (page.host) {
+                page.host.showToast(guard.reason ? guard.reason : "当前无法启动");
             }
+            return;
         }
-        return result;
-    }
-
-    /* enum 字段的选项：runner 类型仍用运行器列表，其余读字段自带的 options */
-    function fieldOptions(field) {
-        if (!field) {
-            return [];
+        Adapter.launchGame(page.activeSlug, info.label ? info.label : page.activeSlug);
+        if (page.host) {
+            page.host.navigate("tasks");
         }
-        if (field.type === "runner") {
-            return Configs.runnerNames;
-        }
-        return field.options !== undefined && field.options !== null ? field.options : [];
     }
 
-    function stateKind(level) {
-        if (level === "ok") return "state";
-        if (level === "error") return "danger";
-        return "warn";
-    }
-
-    Component.onCompleted: {
-        page.selectedSlug = Games.firstSlug();
-        page.syncGameInfo();
-        page.refreshIssues();
-        page.refreshFields();
-    }
-
-    onSelectedSlugChanged: {
-        page.syncGameInfo();
-        page.refreshIssues();
-        page.refreshFields();
-    }
+    Component.onCompleted: page.syncActiveSlug()
+    onCurrentSlugChanged: page.syncActiveSlug()
 
     Connections {
         target: Games
-        function onChanged() {
-            if (page.selectedSlug.length === 0
-                || Games.indexOfSlug(page.selectedSlug) < 0) {
-                page.selectedSlug = Games.firstSlug();
-            }
-            page.syncGameInfo();
-            page.refreshFields();
-        }
+        function onChanged() { page.syncActiveSlug() }
     }
 
-    Connections {
-        target: Configs
-        function onReloaded() { page.refreshFields(); }
-    }
-
-    Connections {
-        target: page.gameCfg
-        function onChanged() { page.refreshIssues(); }
-    }
-
-    Connections {
-        target: Adapter
-        function onGameConfigCreated(slug) {
-            page.pendingSlug = slug;
-            Games.refresh();
-            Configs.reloadAll();
-            page.selectedSlug = slug;
-            page.host.showToast("已创建 " + slug + ".conf，请填写 game.exe 与 runner.name");
-        }
-    }
-
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 14
+        // 和单栏页统一：左右 24、上 16，切页时左边缘不跳
+        anchors.margins: Md3.space.xl
+        anchors.topMargin: Md3.space.lg
+        spacing: Md3.space.lg
 
-        PageHeader {
-            Layout.fillWidth: true
-            index: "02"
-            title: "游戏"
-            english: "GAMES"
-            subtitle: "CONFIGURATION / LAUNCH / REAL OUTPUT"
-
-            ArkButton {
-                text: "添加游戏配置"
-                implicitHeight: 40
-                primary: true
-                enabled: Runtime.ready
-                onClicked: addDialog.open()
-            }
-
-            ArkButton {
-                text: "重新扫描"
-                implicitHeight: 40
-                ghost: true
-                onClicked: {
-                    Games.refresh();
-                    page.host.showToast("已重新扫描配置与启动脚本");
-                }
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
+        // 左：游戏列表（标题栏放进面板内，左右两栏顶边才对得齐）
+        Rectangle {
+            Layout.preferredWidth: 300
+            Layout.minimumWidth: 300
+            Layout.maximumWidth: 300
             Layout.fillHeight: true
-            spacing: 12
+            radius: Md3.shape.medium
+            color: Theme.colors.surfaceContainerLow
+            border.width: 1
+            border.color: Theme.colors.outlineVariant
+            clip: true
 
-            // 左侧游戏列表
-            ChamferedPanel {
-                Layout.preferredWidth: 340
-                Layout.fillHeight: true
-                contentMargin: 14
-                cut: 10
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Md3.space.sm
+                spacing: Md3.space.sm
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 8
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 100000
+                    Layout.leftMargin: 8
+                    Layout.rightMargin: 4
+                    spacing: Md3.space.sm
 
-                    SectionHeader {
-                        Layout.fillWidth: true
-                        index: "01"
-                        english: "CONFIGURED"
-                        title: "已配置游戏"
+                    MdText { role: "titleSmall"; text: "游戏" }
+                    MdTag {
+                        text: Games.count + ""
+                        status: "neutral"
                     }
-
-                    ListView {
-                        id: gameList
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        clip: true
-                        model: Games
-                        spacing: 0
-                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-
-                        delegate: Item {
-                            width: gameList.width
-                            height: 66
-
-                            readonly property bool selected: page.selectedSlug === slug
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: selected ? Theme.colors.ink3
-                                       : (gameMouse.containsMouse ? Theme.colors.ink3 : "transparent")
-                            }
-
-                            Rectangle {
-                                width: 2
-                                height: parent.height
-                                color: selected ? Theme.colors.signal : "transparent"
-                            }
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 12
-                                anchors.rightMargin: 10
-                                spacing: 10
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 1
-
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: label
-                                        color: Theme.colors.paper2
-                                        font.family: App.uiFontFamily
-                                        font.pixelSize: 13
-                                        font.weight: Font.Medium
-                                        elide: Text.ElideRight
-                                    }
-
-                                    RowLayout {
-                                        spacing: 7
-
-                                        MicroLabel {
-                                            label: slug
-                                            color: Theme.colors.muted
-                                            microSize: 9
-                                            tracking: 0.8
-                                        }
-
-                                        MicroLabel {
-                                            label: runnerName.length > 0 ? runnerName : "NO RUNNER"
-                                            color: Theme.colors.disabled
-                                            microSize: 9
-                                            tracking: 0.6
-                                        }
-                                    }
-
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: status
-                                        color: statusLevel === "ok" ? Theme.colors.state
-                                             : (statusLevel === "error" ? Theme.colors.danger
-                                                                        : Theme.colors.warn)
-                                        font.family: App.uiFontFamily
-                                        font.pixelSize: 10
-                                        elide: Text.ElideRight
-                                    }
-                                }
-
-                                ArkTag {
-                                    text: statusLevel === "ok" ? "READY"
-                                          : (statusLevel === "error" ? "ERROR" : "WARN")
-                                    kind: page.stateKind(statusLevel)
-                                    implicitHeight: 20
-                                }
-                            }
-
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                height: 1
-                                color: Theme.colors.rule
-                                opacity: 0.6
-                            }
-
-                            MouseArea {
-                                id: gameMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: page.selectGame(slug)
-                            }
-                        }
-                    }
-
-                    Text {
-                        Layout.fillWidth: true
-                        visible: Games.count === 0
-                        text: "还没有游戏配置。点击「添加游戏配置」，从上游示例模板创建。"
-                        color: Theme.colors.muted
-                        font.family: App.uiFontFamily
-                        font.pixelSize: 11
-                        wrapMode: Text.WordWrap
-                    }
-
-                    MicroLabel {
-                        Layout.fillWidth: true
-                        label: "GAMES DIR: " + Games.gamesDirectory
-                        color: Theme.colors.disabled
-                        microSize: 8
-                        tracking: 0.5
-                        elide: Text.ElideMiddle
+                    Item { Layout.fillWidth: true }
+                    MdIconButton {
+                        iconName: "add"
+                        size: 32
+                        iconSize: 18
+                        tooltip: "添加游戏"
+                        onClicked: addDialog.open()
                     }
                 }
-            }
 
-            // 右侧详情
-            ChamferedPanel {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                contentMargin: 16
-                cut: 10
+                ListView {
+                    id: gameList
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: Games
+                    spacing: 2
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: MdScrollBar { }
 
-                Item {
-                    anchors.fill: parent
+                    delegate: Item {
+                        width: gameList.width
+                        height: 64
 
-                    EmptyState {
-                        anchors.fill: parent
-                        visible: page.selectedSlug.length === 0
-                        title: "选择一个游戏，或添加配置"
-                        description: "游戏列表来自 CONFIG_DIR/games；启动脚本通过 scripts/*.sh 中的 GAME_NAME 自动匹配。"
-                        actionText: "添加游戏配置"
-                        indexText: "02"
-                        onActionTriggered: addDialog.open()
-                    }
+                        readonly property bool selected: page.activeSlug === model.slug
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        visible: page.selectedSlug.length > 0
-                        spacing: 10
-
-                        // 标题行
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Text {
-                                text: page.gameInfo.label ? page.gameInfo.label : page.selectedSlug
-                                color: Theme.colors.paper
-                                font.family: App.uiFontFamily
-                                font.pixelSize: 22
-                                font.weight: Font.Bold
-                                font.letterSpacing: -0.2
-                            }
-
-                            MicroLabel {
-                                label: page.selectedSlug
-                                color: Theme.colors.signal
-                                microSize: 9
-                                tracking: 1.2
-                            }
-
-                            ArkTag {
-                                text: page.gameInfo.status ? page.gameInfo.status : ""
-                                kind: page.stateKind(page.gameInfo.statusLevel)
-                                implicitHeight: 18
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            ArkButton {
-                                text: "重新加载"
-                                implicitHeight: 40
-                                ghost: true
-                                onClicked: {
-                                    if (page.gameCfg) {
-                                        page.gameCfg.discardChanges();
-                                        page.refreshIssues();
-                                        page.host.showToast("已从磁盘重新加载");
-                                    }
-                                }
-                            }
-
-                            ArkButton {
-                                text: "保存配置"
-                                implicitHeight: 40
-                                enabled: page.gameCfg && page.gameCfg.dirty
-                                onClicked: page.trySave()
-                            }
-
-                            ArkButton {
-                                text: "启动游戏"
-                                implicitHeight: 40
-                                primary: true
-                                enabled: page.gameInfo.launchable === true && Runtime.ready
-                                         && page.gameCfg && !page.gameCfg.dirty
-                                onClicked: page.launch()
-                            }
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Md3.shape.small
+                            color: selected ? Theme.colors.secondaryContainer
+                                 : (rowHover.containsMouse ? Md3.hover(Theme.colors.onSurface)
+                                                           : "transparent")
                         }
 
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "配置文件"
-                            value: page.gameCfg ? page.gameCfg.filePath : ""
+                        Column {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+
+                            MdText {
+                                width: parent.width
+                                role: "bodyLarge"
+                                text: model.label
+                                color: selected ? Theme.colors.onSecondaryContainer
+                                                : Theme.colors.onSurface
+                                elide: Text.ElideRight
+                            }
+
+                            MdText {
+                                width: parent.width
+                                role: "bodySmall"
+                                text: model.status
+                                color: model.statusLevel === "error" ? Theme.colors.error
+                                     : (model.statusLevel === "warning" ? Theme.colors.warning
+                                                                        : Theme.colors.onSurfaceVariant)
+                                elide: Text.ElideRight
+                            }
                         }
 
                         Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: Theme.colors.rule
+                            visible: !model.launchable
+                            width: 6
+                            height: 6
+                            radius: 3
+                            color: Theme.colors.outline
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
                         }
 
-                        ScrollView {
-                            id: detailScroll
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            clip: true
-                            contentWidth: availableWidth
-                            ScrollBar.vertical.policy: ScrollBar.AsNeeded
-
-                            ColumnLayout {
-                                width: detailScroll.availableWidth
-                                spacing: 12
-
-                                SectionHeader {
-                                    Layout.fillWidth: true
-                                    index: "01"
-                                    english: "BASIC"
-                                    title: "基础配置"
-                                }
-
-                                Repeater {
-                                    model: page.basicFields
-
-                                    delegate: ConfigField {
-                                        Layout.fillWidth: true
-                                        config: page.gameCfg
-                                        configKey: modelData.key
-                                        title: modelData.title
-                                        description: modelData.description
-                                        hint: modelData.hint
-                                        type: modelData.type
-                                        options: page.fieldOptions(modelData)
-                                    }
-                                }
-
-                                SectionHeader {
-                                    Layout.fillWidth: true
-                                    Layout.topMargin: 4
-                                    index: "02"
-                                    english: "ADVANCED"
-                                    title: "高级参数"
-                                }
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    ArkButton {
-                                        text: page.advanced ? "收起高级参数" : "展开高级参数"
-                                        implicitHeight: 36
-                                        ghost: true
-                                        onClicked: page.advanced = !page.advanced
-                                    }
-
-                                    MicroLabel {
-                                        label: "WORKDIR / PREFIX / UMU ID"
-                                        color: Theme.colors.disabled
-                                        microSize: 8
-                                        tracking: 1.0
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-                                }
-
-                                Repeater {
-                                    model: page.advanced ? page.advancedFields : []
-
-                                    delegate: ConfigField {
-                                        Layout.fillWidth: true
-                                        config: page.gameCfg
-                                        configKey: modelData.key
-                                        title: modelData.title
-                                        description: modelData.description
-                                        hint: modelData.hint
-                                        type: modelData.type
-                                        options: page.fieldOptions(modelData)
-                                    }
-                                }
-
-                                /* 终末地替身：仅当当前游戏提供该分组字段时出现，
-                                 * 不受「高级参数」开关限制，索引接在高级之后。 */
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    Layout.topMargin: 4
-                                    spacing: 12
-                                    visible: page.surrogateFields.length > 0
-
-                                    SectionHeader {
-                                        Layout.fillWidth: true
-                                        index: "03"
-                                        english: "SURROGATE"
-                                        title: "终末地替身"
-                                    }
-
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: "mode 保持未启用（空值）时不生成替身，游戏仍按原方式启动；"
-                                              + "launcher 模式用于挂起官方启动器后由替身接管启动流程。"
-                                        color: Theme.colors.muted
-                                        font.family: App.uiFontFamily
-                                        font.pixelSize: 11
-                                        wrapMode: Text.WordWrap
-                                    }
-
-                                    Repeater {
-                                        model: page.surrogateFields
-
-                                        delegate: ConfigField {
-                                            Layout.fillWidth: true
-                                            config: page.gameCfg
-                                            configKey: modelData.key
-                                            title: modelData.title
-                                            description: modelData.description
-                                            hint: modelData.hint
-                                            type: modelData.type
-                                            options: page.fieldOptions(modelData)
-                                        }
-                                    }
-                                }
-
-                                ValidationList {
-                                    Layout.fillWidth: true
-                                    issues: page.issues
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    visible: page.issues.length === 0 && page.gameCfg
-                                             && !page.gameCfg.exists
-                                    text: "配置文件尚不存在。先通过「添加游戏配置」从示例模板创建。"
-                                    color: Theme.colors.warn
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 11
-                                    wrapMode: Text.WordWrap
-                                }
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    ArkButton {
-                                        text: "原始编辑器"
-                                        implicitHeight: 40
-                                        ghost: true
-                                        enabled: page.gameCfg && page.gameCfg.exists
-                                        onClicked: rawEditorDialog.openWith(
-                                            "游戏配置原始编辑器",
-                                            page.gameCfg.filePath,
-                                            page.gameCfg.text,
-                                            false)
-                                    }
-
-                                    MicroLabel {
-                                        label: "大窗口编辑 / 保留注释与顺序 / 双向滚动"
-                                        color: Theme.colors.disabled
-                                        microSize: 8
-                                        tracking: 1.0
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-                                }
-
-                                Item { Layout.preferredHeight: 8 }
-                            }
+                        MouseArea {
+                            id: rowHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: page.select(model.slug)
                         }
+                    }
 
-                        // 底部：启动条件与隔离说明
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            Rectangle {
-                                width: 6
-                                height: 6
-                                color: page.gameInfo.launchable ? Theme.colors.state
-                                                                : Theme.colors.warn
-                            }
-
-                            MicroLabel {
-                                Layout.fillWidth: true
-                                label: page.gameInfo.launchable
-                                       ? "启动命令：bash " + Games.launcherForSlug(page.selectedSlug)
-                                       : (page.gameInfo.status ? page.gameInfo.status
-                                                               : "需要先完成配置")
-                                color: page.gameInfo.launchable ? Theme.colors.muted
-                                                                : Theme.colors.warn
-                                microSize: 9
-                                tracking: 0.5
-                                elide: Text.ElideMiddle
-                            }
-
-                            MicroLabel {
-                                label: "隔离环境：CONFIG_DIR / CACHE_DIR / DATA_DIR / TEMP_DIR"
-                                color: Theme.colors.disabled
-                                microSize: 8
-                                tracking: 0.6
-                            }
-                        }
+                    MdText {
+                        anchors.centerIn: parent
+                        visible: gameList.count === 0
+                        role: "bodySmall"
+                        tone: "variant"
+                        text: "还没有游戏配置"
                     }
                 }
             }
         }
-    }
 
-    ConfirmDialog {
-        id: saveDialog
-        title: "配置存在 " + page.issues.length + " 项警告"
-        message: "这些警告不会阻止保存，但可能导致启动失败。建议先修正 game.exe 与 runner.name。仍要保存吗？"
-        confirmText: "仍然保存"
-        onAccepted: page.doSave()
-    }
+        // 右：编辑区
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-    RawEditorDialog {
-        id: rawEditorDialog
-
-        onApplyRequested: function (text) {
-            if (!page.gameCfg) {
-                return;
-            }
-            const result = page.gameCfg.applyRawText(text);
-            if (result.ok) {
-                page.refreshIssues();
-                rawEditorDialog.markApplied();
-                page.host.showToast("已应用到内存，保存后写入磁盘");
-            } else {
-                page.host.showToast("无法应用：" + result.error);
-            }
-        }
-
-        onSaveRequested: function (text) {
-            if (!page.gameCfg) {
-                return;
-            }
-            const applied = page.gameCfg.applyRawText(text);
-            if (!applied.ok) {
-                page.host.showToast("无法应用：" + applied.error);
-                return;
-            }
-            if (page.doSave()) {
-                rawEditorDialog.close();
-            }
-        }
-    }
-
-    // 添加游戏配置
-    Popup {
-        id: addDialog
-        objectName: "addGameDialog"
-        modal: true
-        focus: true
-        padding: 24
-        width: Math.min(600, Overlay.overlay ? Overlay.overlay.width - 80 : 600)
-        height: Math.min(640, Overlay.overlay ? Overlay.overlay.height - 60 : 640)
-        anchors.centerIn: Overlay.overlay
-        closePolicy: Popup.CloseOnEscape
-
-        background: ChamferedPanel {
-            cut: 12
-            contentMargin: 0
-        }
-
-        contentItem: ColumnLayout {
-            spacing: 10
-
-            RowLayout {
-                Layout.fillWidth: true
-
-                MicroLabel {
-                    label: "ADD GAME CONFIG"
-                    color: Theme.colors.signal
-                    microSize: 10
-                    tracking: 1.6
-                }
-
-                Item { Layout.fillWidth: true }
-
-                MicroLabel {
-                    label: "来源：config/games.examples"
-                    color: Theme.colors.disabled
-                    microSize: 9
-                    tracking: 0.8
-                }
-            }
-
-            Text {
-                Layout.fillWidth: true
-                text: "从上游示例模板复制配置到隔离的 CONFIG_DIR。已存在的配置不会被覆盖。"
-                color: Theme.colors.muted
-                font.family: App.uiFontFamily
-                font.pixelSize: 11
-                wrapMode: Text.WordWrap
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: Theme.colors.rule
-            }
-
-            Item {
-                Layout.fillWidth: true
-                height: 20
-
-                MicroLabel {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 20
-                    label: "游戏 / GAME"
-                    color: Theme.colors.disabled
-                    microSize: 8
-                    tracking: 1.2
-                }
-
-                MicroLabel {
-                    anchors.right: actionHeader.left
-                    anchors.rightMargin: 12
-                    width: 116
-                    label: "状态 / STATUS"
-                    color: Theme.colors.disabled
-                    microSize: 8
-                    tracking: 1.2
-                }
-
-                MicroLabel {
-                    id: actionHeader
-                    anchors.right: parent.right
-                    width: 96
-                    label: "操作 / ACTION"
-                    color: Theme.colors.disabled
-                    microSize: 8
-                    tracking: 1.2
-                }
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                height: 1
-                color: Theme.colors.rule
+            MdEmptyState {
+                anchors.centerIn: parent
+                width: parent.width - Md3.space.xl * 2
+                visible: page.activeSlug.length === 0
+                iconName: "games"
+                title: "选择一个游戏"
+                description: "从左侧选择已配置的游戏，或用「添加游戏」创建一份新配置。"
+                actionText: "添加游戏"
+                onActionClicked: addDialog.open()
             }
 
             Flickable {
-                id: templateFlick
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                anchors.fill: parent
+                visible: page.activeSlug.length > 0
                 clip: true
                 contentWidth: width
-                contentHeight: templateColumn.implicitHeight
+                contentHeight: editor.implicitHeight
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ScrollBar.vertical: MdScrollBar { }
 
                 ColumnLayout {
-                    id: templateColumn
-                    width: templateFlick.width
-                    spacing: 0
+                    id: editor
+                    width: parent.width - Md3.space.sm
+                    // 页面级卡片堆叠统一 24（诊断/设置/关于页都是 24）
+                    spacing: Md3.space.xl
 
-                    Repeater {
-                        model: Games.templates
+                    // 头部
+                    MdCard {
+                        Layout.fillWidth: true
 
-                        delegate: Item {
-                            width: templateColumn.width
-                            height: 56
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: Md3.space.sm
 
-                            Rectangle {
-                                x: 0
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 8
-                                height: 8
-                                color: modelData.configured ? Theme.colors.state : Theme.colors.signal
-                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 100000
+                                spacing: Md3.space.sm
 
-                            Column {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 20
-                                anchors.right: statusWrap.left
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: 1
-
-                                Text {
-                                    width: parent.width
-                                    text: modelData.label
-                                    color: Theme.colors.paper2
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 13
+                                MdText {
+                                    Layout.fillWidth: true
+                                    role: "titleLarge"
+                                    text: page.gameInfo().label ? page.gameInfo().label : page.activeSlug
                                     elide: Text.ElideRight
                                 }
 
-                                MicroLabel {
-                                    width: parent.width
-                                    label: modelData.slug
-                                    color: Theme.colors.muted
-                                    microSize: 9
-                                    tracking: 0.8
+                                MdTag {
+                                    text: page.gameInfo().status ? page.gameInfo().status : "未知"
+                                    status: page.gameInfo().statusLevel === "error" ? "error"
+                                          : (page.gameInfo().statusLevel === "warning" ? "warning"
+                                                                                       : "success")
+                                }
+
+                                MdTag {
+                                    visible: !page.gameInfo().exeExists
+                                    text: "exe 缺失"
+                                    status: "error"
+                                }
+
+                                MdTag {
+                                    visible: Configs.hasUnsavedChanges()
+                                    text: "未保存"
+                                    status: "warning"
                                 }
                             }
 
-                            Item {
-                                id: statusWrap
-                                anchors.right: actionWrap.left
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 116
-                                height: 24
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: 100000
+                                spacing: Md3.space.sm
 
-                                ArkTag {
-                                    anchors.left: parent.left
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: modelData.configured ? "CONFIGURED" : "TEMPLATE"
-                                    kind: modelData.configured ? "state" : "neutral"
-                                    implicitHeight: 22
+                                // 弹簧放在行首，动作按钮才会靠右对齐
+                                Item { Layout.fillWidth: true }
+
+                                MdButton {
+                                    text: "启动"
+                                    variant: "filled"
+                                    iconName: "play"
+                                    enabled: page.gameInfo().launchable === true
+                                    onClicked: page.launch()
                                 }
-                            }
-
-                            Item {
-                                id: actionWrap
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 96
-                                height: 34
-
-                                ArkButton {
-                                    anchors.right: parent.right
-                                    width: 88
-                                    text: modelData.configured ? "已存在" : "创建"
-                                    implicitHeight: 34
-                                    enabled: !modelData.configured && Runtime.ready
+                                MdButton {
+                                    text: "保存"
+                                    variant: "tonal"
+                                    iconName: "save"
+                                    enabled: Configs.hasUnsavedChanges()
+                                    onClicked: page.saveGame()
+                                }
+                                MdButton {
+                                    text: "放弃修改"
+                                    variant: "outlined"
+                                    enabled: Configs.hasUnsavedChanges()
                                     onClicked: {
-                                        const task = Adapter.createGameConfig(modelData.slug);
-                                        if (!task) {
-                                            page.host.showToast("无法创建：" + Adapter.lastError);
-                                            return;
+                                        const config = page.gameConfig();
+                                        if (config) {
+                                            config.discardChanges();
                                         }
-                                        addDialog.close();
-                                        Tasks.select(task.id);
-                                        page.host.navigate("tasks");
+                                    }
+                                }
+                                MdButton {
+                                    text: "重载"
+                                    variant: "outlined"
+                                    iconName: "download"
+                                    onClicked: {
+                                        const config = page.gameConfig();
+                                        if (config) {
+                                            config.reload();
+                                        }
+                                    }
+                                }
+                                MdButton {
+                                    text: "原始编辑器"
+                                    variant: "outlined"
+                                    iconName: "code"
+                                    visible: Settings.advancedMode
+                                    onClicked: {
+                                        const config = page.gameConfig();
+                                        if (config) {
+                                            rawDialog.openWith(config.text);
+                                        }
                                     }
                                 }
                             }
 
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                height: 1
-                                color: Theme.colors.rule
-                                opacity: 0.6
+                            MdText {
+                                Layout.fillWidth: true
+                                visible: !page.gameInfo().launchable
+                                role: "bodySmall"
+                                color: Theme.colors.warning
+                                wrapMode: Text.WordWrap
+                                text: "暂时无法启动：" + (page.gameInfo().status ? page.gameInfo().status : "配置不完整")
+                            }
+                        }
+                    }
+
+                    // 校验
+                    MdCard {
+                        Layout.fillWidth: true
+                        variant: "outlined"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: Md3.space.sm
+
+                            MdSectionHeader {
+                                title: "校验"
+                                caption: "有错误时无法启动"
+                            }
+
+                            MdValidationList {
+                                Layout.fillWidth: true
+                                issues: page.activeSlug.length > 0 ? Configs.validateGame(page.activeSlug) : []
+                                emptyText: "这份配置没有发现问题"
+                            }
+                        }
+                    }
+
+                    // 字段
+                    MdCard {
+                        Layout.fillWidth: true
+                        variant: "outlined"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: Md3.space.md
+
+                            MdSectionHeader {
+                                title: "配置字段"
+                                caption: page.activeSlug + ".conf"
+                            }
+
+                            Repeater {
+                                model: page.fieldGroups
+
+                                delegate: MdExpansionPanel {
+                                    Layout.fillWidth: true
+                                    title: modelData
+                                    subtitle: page.fieldsIn(modelData).length + " 项"
+                                    expanded: modelData === "基础" || index === 0
+
+                                    Column {
+                                        width: parent.width
+                                        spacing: Md3.space.md
+
+                                        Repeater {
+                                            model: page.fieldsIn(modelData)
+
+                                            delegate: Column {
+                                                width: parent.width
+                                                spacing: Md3.space.md
+
+                                                MdField {
+                                                    width: parent.width
+                                                    config: page.gameConfig()
+                                                    configKey: modelData.key
+                                                    title: modelData.title
+                                                    description: modelData.description
+                                                    hint: modelData.hint
+                                                    type: modelData.type
+                                                    options: modelData.options ? modelData.options : []
+                                                }
+
+                                                MdDivider { width: parent.width }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 路径信息
+                    MdCard {
+                        Layout.fillWidth: true
+                        variant: "outlined"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            spacing: Md3.space.xs
+
+                            MdSectionHeader {
+                                title: "文件与启动"
+                            }
+
+                            MdInfoRow {
+                                Layout.fillWidth: true
+                                label: "配置文件"
+                                value: page.gameInfo().configPath ? page.gameInfo().configPath : "—"
+                                mono: true
+                                copyable: true
+                                onCopyRequested: AppControl.copyToClipboard(page.gameInfo().configPath)
+                            }
+                            MdInfoRow {
+                                Layout.fillWidth: true
+                                label: "启动脚本"
+                                value: page.gameInfo().launcherPath ? page.gameInfo().launcherPath : "—"
+                                mono: true
+                                copyable: true
+                                onCopyRequested: AppControl.copyToClipboard(page.gameInfo().launcherPath)
+                            }
+                            MdInfoRow {
+                                Layout.fillWidth: true
+                                label: "可执行文件"
+                                value: page.gameInfo().exePath ? page.gameInfo().exePath : "—"
+                                mono: true
+                                copyable: true
+                                onCopyRequested: AppControl.copyToClipboard(page.gameInfo().exePath)
+                            }
+                            MdInfoRow {
+                                Layout.fillWidth: true
+                                label: "运行器"
+                                value: page.gameInfo().runnerName ? page.gameInfo().runnerName : "未设置"
+                                mono: true
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    // 添加游戏
+    Dialog {
+        id: addDialog
+        objectName: "addGameDialog"
+        modal: true
+        padding: 0
+        anchors.centerIn: Overlay.overlay
+        width: 520
+        height: Math.min(520, page.height - 96)
+        closePolicy: Popup.CloseOnEscape
+
+        Overlay.modal: Rectangle { color: Md3.alpha(Theme.colors.scrim, 0.4) }
+
+        background: Rectangle {
+            radius: Md3.shape.large
+            color: Theme.colors.surfaceContainerHigh
+        }
+
+        contentItem: ColumnLayout {
+            spacing: Md3.space.md
 
             RowLayout {
                 Layout.fillWidth: true
+                Layout.maximumWidth: 100000
+                Layout.margins: Md3.space.lg
+                Layout.bottomMargin: 0
+                spacing: Md3.space.sm
 
-                Text {
-                    Layout.fillWidth: true
-                    visible: Games.templates.length === 0
-                    text: "Hyps 组件尚未就绪，无法读取示例配置。"
-                    color: Theme.colors.warn
-                    font.family: App.uiFontFamily
-                    font.pixelSize: 11
+                MdIcon {
+                    name: "add"
+                    size: 22
+                    color: Theme.colors.primary
+                    Layout.alignment: Qt.AlignTop
                 }
 
-                ArkButton {
-                    text: "关闭"
-                    implicitHeight: 36
-                    ghost: true
+                // 标题和说明放进同一列：分成两个同级项时，说明会退回图标那条左轨
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 100000
+                    spacing: Md3.space.xs
+
+                    MdText {
+                        role: "titleLarge"
+                        text: "添加游戏"
+                    }
+
+                    MdText {
+                        Layout.fillWidth: true
+                        role: "bodySmall"
+                        tone: "variant"
+                        text: "模板来自组件内的游戏定义；已配置的游戏会显示为「已存在」。"
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
+                MdIconButton {
+                    iconName: "close"
+                    Layout.alignment: Qt.AlignTop
                     onClicked: addDialog.close()
                 }
+            }
+
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.leftMargin: Md3.space.sm
+                Layout.rightMargin: Md3.space.sm
+                clip: true
+                model: Games.templates
+                spacing: 2
+                ScrollBar.vertical: MdScrollBar { }
+
+                delegate: MdListItem {
+                    width: ListView.view.width
+                    headline: modelData.label
+                    supporting: modelData.slug + (modelData.configured ? " · 已存在" : "")
+                    trailingText: modelData.configured ? "已存在" : "创建"
+                    status: modelData.configured ? "success" : "neutral"
+                    interactive: !modelData.configured
+                    onClicked: {
+                        Adapter.createGameConfig(modelData.slug);
+                        page.select(modelData.slug);
+                        addDialog.close();
+                        if (page.host) {
+                            page.host.showToast("已创建 " + modelData.label + " 配置");
+                        }
+                    }
+                }
+            }
+
+            // 模板为空时不要留一大块空白
+            MdEmptyState {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: Games.templates.length === 0
+                iconName: "games"
+                containerColor: Theme.colors.surfaceContainerHighest
+                title: "组件里还没有游戏定义"
+                description: "先初始化上游组件，再回到这里添加游戏配置。"
+            }
+
+            // 底部操作区
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.maximumWidth: 100000
+                Layout.margins: Md3.space.lg
+                Layout.topMargin: 0
+                spacing: Md3.space.sm
+
+                Item { Layout.fillWidth: true }
+
+                MdButton {
+                    text: "关闭"
+                    variant: "text"
+                    onClicked: addDialog.close()
+                }
+            }
+        }
+    }
+
+    MdRawEditorDialog {
+        id: rawDialog
+        objectName: "rawEditorDialog"
+        heading: "原始配置"
+        subtitle: page.activeSlug + ".conf"
+        onApplyText: function (text) {
+            const config = page.gameConfig();
+            if (config) {
+                config.applyRawText(text);
+            }
+        }
+        onApplyAndSave: function (text) {
+            const config = page.gameConfig();
+            if (config) {
+                config.applyRawText(text);
+                page.saveGame();
             }
         }
     }

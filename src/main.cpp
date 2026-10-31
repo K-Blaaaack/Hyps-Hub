@@ -20,6 +20,7 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QGuiApplication>
+#include <QFileInfo>
 #include <QIcon>
 #include <QLockFile>
 #include <QMessageBox>
@@ -63,6 +64,11 @@ int main(int argc, char *argv[])
             QStringLiteral("打开指定 objectName 的 QML 弹窗（用于截图/调试）"),
             QStringLiteral("objectName"));
     parser.addOption(previewDialogOption);
+    QCommandLineOption qmlSourceOption(
+            QStringLiteral("qml-source"),
+            QStringLiteral("从磁盘目录或 .qml 文件加载界面（开发用，绕过 qrc，改 QML 后无需重新编译）"),
+            QStringLiteral("path"));
+    parser.addOption(qmlSourceOption);
     QCommandLineOption allowRootOption(
             QStringLiteral("allow-root"),
             QStringLiteral("允许以 root 运行（默认拒绝；上游 Hyps 会拒绝 root 启动游戏）"));
@@ -78,7 +84,7 @@ int main(int argc, char *argv[])
     }
 
     QQuickStyle::setStyle(QStringLiteral("Basic"));
-    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/hyps-hub.svg")));
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/assets/hyps-hub-tile.svg")));
 
     AppPaths paths;
     QString directoryError;
@@ -197,7 +203,23 @@ int main(int argc, char *argv[])
                          QTextStream(stderr) << "无法加载 QML 界面：" << url.toString() << '\n';
                      });
 
-    engine.load(QUrl(QStringLiteral("qrc:/qml/Main.qml")));
+    QUrl rootUrl(QStringLiteral("qrc:/qml/Main.qml"));
+    if (parser.isSet(qmlSourceOption)) {
+        const QFileInfo source(parser.value(qmlSourceOption));
+        if (!source.exists()) {
+            QTextStream(stderr) << "找不到 --qml-source 路径：" << source.filePath() << '\n';
+            return 5;
+        }
+        // 目录导入（import "components"）以根文件所在目录为基准，
+        // 额外把该目录加入导入路径，方便 gallery 之类位于别处的开发用根文件。
+        engine.addImportPath(source.isDir() ? source.absoluteFilePath()
+                                            : source.absolutePath());
+        rootUrl = source.isDir()
+                          ? QUrl::fromLocalFile(source.absoluteFilePath() + QStringLiteral("/Main.qml"))
+                          : QUrl::fromLocalFile(source.absoluteFilePath());
+        QTextStream(stdout) << "qml-source: " << rootUrl.toString() << '\n';
+    }
+    engine.load(rootUrl);
     if (engine.rootObjects().isEmpty()) {
         QTextStream(stderr) << "QML 根对象创建失败，导入路径："
                             << engine.importPathList().join(QStringLiteral(", ")) << '\n';

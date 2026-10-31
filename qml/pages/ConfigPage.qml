@@ -1,849 +1,364 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Controls
 import HypsHub 1.0
 import "../components"
+import "../theme/Md3.js" as Md3
 
-/* 配置管理：通用配置 / 运行器 / 路径。所有编辑对象都在隔离的 CONFIG_DIR 内。 */
+/* 配置页：通用配置（按分组折叠）+ 运行器配置 + 校验 + 原始编辑器。 */
 Item {
     id: page
 
     property var host
-    property int tab: 0
-    property var commonIssues: []
-    property var runnerIssues: []
-    property string runnerName: ""
-    property var runnerCfg: runnerName.length > 0 ? Configs.runnerConfig(runnerName) : null
+    property string currentRunner: ""
+    property var fieldGroups: []
+    property var runnerFieldGroups: []
 
-    readonly property var tabDefs: [
-        { label: "通用配置", english: "COMMON" },
-        { label: "运行器", english: "RUNNERS" },
-        { label: "路径", english: "PATHS" }
-    ]
-
-    function refreshCommon() {
-        commonIssues = Configs.validateCommon();
-    }
-
-    function refreshRunner() {
-        runnerIssues = page.runnerName.length > 0 ? Configs.validateRunner(page.runnerName) : [];
-    }
-
-    function saveCommon() {
-        const result = Configs.common.save();
-        if (result.ok) {
-            page.host.showToast(result.backup ? "已保存配置，备份：" + result.backup : "没有修改或已保存");
-            page.refreshCommon();
-            Games.refresh();
-            return true;
-        }
-        page.host.showToast("保存失败：" + result.error);
-        return false;
-    }
-
-    function trySaveCommon() {
-        if (page.commonIssues.length > 0) {
-            saveCommonDialog.open();
-        } else {
-            page.saveCommon();
-        }
-    }
-
-    function uniqueGroups() {
-        const fields = Configs.commonFields;
-        const groups = [];
-        for (let i = 0; i < fields.length; ++i) {
-            if (groups.indexOf(fields[i].group) < 0) {
-                groups.push(fields[i].group);
+    function collectGroups(fields) {
+        const seen = [];
+        const list = fields ? fields : [];
+        for (let i = 0; i < list.length; ++i) {
+            const group = list[i].group !== undefined && list[i].group !== null
+                    ? String(list[i].group) : "其它";
+            if (seen.indexOf(group) < 0) {
+                seen.push(group);
             }
         }
-        return groups;
+        return seen;
     }
 
-    function fieldsFor(group) {
-        const fields = Configs.commonFields;
-        const result = [];
-        for (let i = 0; i < fields.length; ++i) {
-            if (fields[i].group === group) {
-                result.push(fields[i]);
+    function fieldsIn(fields, group) {
+        const list = fields ? fields : [];
+        const out = [];
+        for (let i = 0; i < list.length; ++i) {
+            const name = list[i].group !== undefined && list[i].group !== null
+                    ? String(list[i].group) : "其它";
+            if (name === group) {
+                out.push(list[i]);
             }
         }
-        return result;
+        return out;
     }
 
-    /* enum 字段的选项：runner 类型用运行器列表，其余读字段自带的 options */
-    function fieldOptions(field) {
-        if (!field) {
-            return [];
-        }
-        if (field.type === "runner") {
-            return Configs.runnerNames;
-        }
-        return field.options !== undefined && field.options !== null ? field.options : [];
+    function refreshGroups() {
+        page.fieldGroups = page.collectGroups(Configs.commonFields);
+        page.runnerFieldGroups = page.collectGroups(Configs.runnerConfigFields
+                                                   ? Configs.runnerConfigFields : []);
     }
 
-    function selectRunner(name) {
-        page.runnerName = name;
-        page.refreshRunner();
+    function activeRunner() {
+        if (page.currentRunner.length > 0) {
+            return page.currentRunner;
+        }
+        return Configs.runnerNames.length > 0 ? Configs.runnerNames[0] : "";
     }
 
-    function saveRunner() {
-        if (!page.runnerCfg || !Configs.runnerDirectoryIsolated) {
-            page.host.showToast("运行器目录来自 Hyps 组件，已禁止写入。请先初始化配置。");
-            return false;
-        }
-        const result = page.runnerCfg.save();
-        if (result.ok) {
-            page.host.showToast(result.backup ? "已保存运行器配置，备份：" + result.backup
-                                              : "没有修改或已保存");
-            Configs.reloadRunners();
-            page.refreshRunner();
-            return true;
-        }
-        page.host.showToast("保存失败：" + result.error);
-        return false;
+    function runnerConfig() {
+        const name = page.activeRunner();
+        return name.length > 0 ? Configs.runnerConfig(name) : null;
     }
 
-    Component.onCompleted: {
-        page.refreshCommon();
-        if (Configs.runners.length > 0) {
-            page.selectRunner(Configs.runners[0].name);
+    function saveConfig(config) {
+        if (!config) {
+            return;
         }
-    }
-
-    Connections {
-        target: Configs
-        function onReloaded() {
-            page.refreshCommon();
-            page.refreshRunner();
-        }
-        function onRunnersChanged() {
-            if (page.runnerName.length === 0 && Configs.runners.length > 0) {
-                page.selectRunner(Configs.runners[0].name);
+        const result = config.save();
+        if (result && result.ok) {
+            if (page.host) {
+                page.host.showToast(result.backup && result.backup.length > 0
+                                    ? "已保存，备份：" + result.backup
+                                    : (result.message ? result.message : "已保存"));
             }
-            page.refreshRunner();
+        } else if (page.host) {
+            page.host.showToast("保存失败：" + (result && result.error ? result.error : "未知错误"));
         }
     }
 
-    Connections {
-        target: Configs.common
-        function onChanged() { page.refreshCommon(); }
-    }
+    Component.onCompleted: page.refreshGroups()
 
-    Connections {
-        target: page.runnerCfg
-        function onChanged() { page.refreshRunner(); }
-    }
-
-    Connections {
-        target: Adapter
-        function onConfigInitialized() {
-            Configs.reloadAll();
-            page.refreshCommon();
-            page.refreshRunner();
-            page.host.showToast("配置目录已初始化");
-        }
-    }
-
-    ColumnLayout {
+    Flickable {
         anchors.fill: parent
-        anchors.margins: 24
-        spacing: 12
+        clip: true
+        contentWidth: width
+        contentHeight: content.implicitHeight + Md3.space.xl * 2
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: MdScrollBar { }
 
-        PageHeader {
-            Layout.fillWidth: true
-            index: "04"
-            title: "配置"
-            english: "CONFIG"
-            subtitle: "ISOLATED CONFIG_DIR / BACKUP BEFORE WRITE"
+        ColumnLayout {
+            id: content
+            width: Math.min(1100, page.width - Md3.space.xl * 2)
+            x: Md3.space.xl
+            y: Md3.space.lg
+            spacing: Md3.space.xl
 
-            ArkButton {
-                text: Settings.advancedMode ? "关闭高级模式" : "高级模式"
-                implicitHeight: 40
-                ghost: true
-                onClicked: Settings.advancedMode = !Settings.advancedMode
-            }
-
-            ArkButton {
-                text: "选择编辑器打开配置目录"
-                implicitHeight: 40
-                ghost: true
-                onClicked: AppControl.openDirectory(App.hypsConfigDir)
-            }
-        }
-
-        // Tab
-        Row {
-            Layout.fillWidth: true
-            spacing: 26
-
-            Repeater {
-                model: page.tabDefs
-
-                delegate: Item {
-                    width: tabColumn.implicitWidth + 20
-                    height: 42
-
-                    Column {
-                        id: tabColumn
-                        spacing: 6
-
-                        Row {
-                            spacing: 8
-
-                            MicroLabel {
-                                label: "0" + (index + 1)
-                                color: page.tab === index ? Theme.colors.signal : Theme.colors.disabled
-                                microSize: 8
-                                tracking: 1.0
-                            }
-
-                            Text {
-                                id: tabText
-                                text: modelData.label
-                                color: page.tab === index ? Theme.colors.paper : Theme.colors.muted
-                                font.family: App.uiFontFamily
-                                font.pixelSize: 13
-                                font.weight: page.tab === index ? Font.DemiBold : Font.Normal
-                            }
-
-                            MicroLabel {
-                                label: modelData.english
-                                color: page.tab === index ? Theme.colors.muted : Theme.colors.disabled
-                                microSize: 8
-                                tracking: 1.0
-                            }
-                        }
-
-                        Rectangle {
-                            width: tabColumn.width
-                            height: 2
-                            color: page.tab === index ? Theme.colors.signal : "transparent"
-                        }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: page.tab = index
-                    }
-                }
-            }
-
-            Item { width: 1; height: 1 }
-        }
-
-        Rectangle {
-            Layout.fillWidth: true
-            height: 1
-            color: Theme.colors.rule
-        }
-
-        StackLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            currentIndex: page.tab
-
-            // ---------------- 通用配置 ----------------
-            Item {
-                id: commonTab
-
-                EmptyState {
-                    anchors.fill: parent
-                    visible: !Configs.common.exists
-                    indexText: "04"
-                    title: "配置目录尚未初始化"
-                    description: "点击后会执行上游 init.sh --no-game，把示例配置与运行器配置复制到 "
-                                 + App.hypsConfigDir + "。已有的配置文件不会被覆盖。"
-                    actionText: "初始化配置"
-                    onActionTriggered: Adapter.initializeConfig()
-                }
-
-                ScrollView {
-                    id: commonScroll
-                    anchors.fill: parent
-                    visible: Configs.common.exists
-                    clip: true
-                    contentWidth: availableWidth
-                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
-
-                    ColumnLayout {
-                        width: commonScroll.availableWidth
-                        spacing: 12
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 10
-
-                            ArkButton {
-                                text: "保存配置"
-                                implicitHeight: 38
-                                primary: true
-                                enabled: Configs.common.dirty
-                                onClicked: page.trySaveCommon()
-                            }
-
-                            ArkButton {
-                                text: "重新加载"
-                                implicitHeight: 38
-                                ghost: true
-                                onClicked: {
-                                    Configs.common.discardChanges();
-                                    page.refreshCommon();
-                                    page.host.showToast("已从磁盘重新加载");
-                                }
-                            }
-
-                            ArkButton {
-                                text: "原始编辑器"
-                                implicitHeight: 40
-                                ghost: true
-                                enabled: Configs.common.exists
-                                onClicked: commonRawDialog.openWith(
-                                    "通用配置原始编辑器",
-                                    Configs.commonConfigPath,
-                                    Configs.common.text,
-                                    false)
-                            }
-
-                            MicroLabel {
-                                visible: Configs.common.dirty
-                                label: "UNSAVED CHANGES"
-                                color: Theme.colors.warn
-                                microSize: 9
-                                tracking: 1.2
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            MicroLabel {
-                                label: "BACKUP KEEP 10"
-                                color: Theme.colors.disabled
-                                microSize: 8
-                                tracking: 0.8
-                            }
-                        }
-
-                        InfoRow {
-                            Layout.fillWidth: true
-                            label: "配置文件"
-                            value: Configs.commonConfigPath
-                        }
-
-                        Repeater {
-                            model: page.uniqueGroups()
-
-                            delegate: ColumnLayout {
-                                id: groupBlock
-                                Layout.fillWidth: true
-                                spacing: 8
-                                readonly property int groupIndex: index
-                                visible: modelData !== "环境变量" || Settings.advancedMode
-
-                                SectionHeader {
-                                    Layout.fillWidth: true
-                                    index: (groupBlock.groupIndex + 2 < 10 ? "0" : "")
-                                           + (groupBlock.groupIndex + 2)
-                                    english: "SECTION"
-                                    title: modelData
-                                }
-
-                                Repeater {
-                                    model: page.fieldsFor(modelData)
-
-                                    delegate: ConfigField {
-                                        Layout.fillWidth: true
-                                        config: Configs.common
-                                        configKey: modelData.key
-                                        title: modelData.title
-                                        description: modelData.description
-                                        hint: modelData.hint
-                                        type: modelData.type
-                                        options: page.fieldOptions(modelData)
-                                    }
-                                }
-                            }
-                        }
-
-                        ValidationList {
-                            Layout.fillWidth: true
-                            issues: page.commonIssues
-                        }
-
-                        Item { Layout.preferredHeight: 8 }
-                    }
-                }
-            }
-
-            // ---------------- 运行器 ----------------
-            Item {
-                id: runnerTab
+            // 工具行
+            MdCard {
+                Layout.fillWidth: true
 
                 ColumnLayout {
                     anchors.fill: parent
-                    spacing: 10
+                    spacing: Md3.space.sm
 
-                    ChamferedPanel {
+                    RowLayout {
                         Layout.fillWidth: true
-                        visible: !Configs.runnerDirectoryIsolated
-                        implicitHeight: runnerWarning.implicitHeight + 36
-                        contentMargin: 16
-                        cut: 8
-                        accentColor: Theme.colors.warn
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
 
-                        ColumnLayout {
-                            id: runnerWarning
-                            anchors.fill: parent
-                            spacing: 6
+                        MdIcon { name: "config"; size: 20; color: Theme.colors.primary }
 
-                            MicroLabel {
-                                label: "READ-ONLY SOURCE"
-                                color: Theme.colors.warn
-                                microSize: 9
-                                tracking: 1.4
-                            }
+                        MdText {
+                            Layout.fillWidth: true
+                            role: "bodySmall"
+                            mono: true
+                            tone: "variant"
+                            text: Configs.commonConfigPath
+                            elide: Text.ElideMiddle
+                        }
 
-                            Text {
-                                Layout.fillWidth: true
-                                text: "当前运行器配置来自 Hyps 组件的 config/runners（未初始化隔离配置）。"
-                                      + "为避免弄脏 Hyps 组件的 Git 工作区，这里禁止写入。"
-                                color: Theme.colors.paper2
-                                font.family: App.uiFontFamily
-                                font.pixelSize: 12
-                                wrapMode: Text.WordWrap
-                            }
+                        MdTag {
+                            visible: Configs.hasUnsavedChanges()
+                            text: "未保存"
+                            status: "warning"
+                        }
 
-                            ArkButton {
-                                text: "初始化隔离配置"
-                                implicitHeight: 36
-                                primary: true
-                                onClicked: Adapter.initializeConfig()
-                            }
+                        MdIconButton {
+                            iconName: "copy"
+                            size: 32
+                            iconSize: 16
+                            tooltip: "复制路径"
+                            onClicked: AppControl.copyToClipboard(Configs.commonConfigPath)
                         }
                     }
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 12
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
 
-                        ChamferedPanel {
-                            Layout.preferredWidth: 300
-                            Layout.fillHeight: true
-                            contentMargin: 14
-                            cut: 10
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                spacing: 8
-
-                                SectionHeader {
-                                    Layout.fillWidth: true
-                                    index: "01"
-                                    english: "RUNNERS"
-                                    title: "运行器配置"
-                                }
-
-                                ListView {
-                                    id: runnerList
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    clip: true
-                                    model: Configs.runners
-                                    spacing: 0
-                                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-
-                                    delegate: Item {
-                                        width: runnerList.width
-                                        height: 58
-                                        readonly property bool selected: page.runnerName === modelData.name
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: selected ? Theme.colors.ink3
-                                                   : (runnerMouse.containsMouse ? Theme.colors.ink3
-                                                                                : "transparent")
-                                        }
-
-                                        Rectangle {
-                                            width: 2
-                                            height: parent.height
-                                            color: selected ? Theme.colors.signal : "transparent"
-                                        }
-
-                                        RowLayout {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: 12
-                                            anchors.rightMargin: 10
-                                            spacing: 8
-
-                                            ColumnLayout {
-                                                Layout.fillWidth: true
-                                                spacing: 1
-
-                                                Text {
-                                                    text: modelData.name
-                                                    color: Theme.colors.paper2
-                                                    font.family: App.monoFontFamily
-                                                    font.pixelSize: 12
-                                                }
-
-                                                Text {
-                                                    Layout.fillWidth: true
-                                                    text: modelData.status
-                                                    color: modelData.statusLevel === "ok"
-                                                           ? Theme.colors.muted : Theme.colors.warn
-                                                    font.family: App.monoFontFamily
-                                                    font.pixelSize: 10
-                                                    elide: Text.ElideRight
-                                                }
-                                            }
-
-                                            Rectangle {
-                                                width: 6
-                                                height: 6
-                                                color: modelData.statusLevel === "ok"
-                                                       ? Theme.colors.state : Theme.colors.warn
-                                            }
-                                        }
-
-                                        MouseArea {
-                                            id: runnerMouse
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: page.selectRunner(modelData.name)
-                                        }
-
-                                        Rectangle {
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.bottom: parent.bottom
-                                            height: 1
-                                            color: Theme.colors.rule
-                                            opacity: 0.6
-                                        }
-                                    }
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    visible: Configs.runners.length === 0
-                                    text: "没有找到运行器配置。"
-                                    color: Theme.colors.muted
-                                    font.family: App.uiFontFamily
-                                    font.pixelSize: 11
-                                }
-
-                                MicroLabel {
-                                    Layout.fillWidth: true
-                                    label: Configs.runnerDirectory
-                                    color: Theme.colors.disabled
-                                    microSize: 8
-                                    tracking: 0.5
-                                    elide: Text.ElideMiddle
-                                }
+                        MdButton {
+                            text: "保存"
+                            variant: "filled"
+                            iconName: "save"
+                            enabled: Configs.common !== null
+                            onClicked: page.saveConfig(Configs.common)
+                        }
+                        MdButton {
+                            text: "放弃修改"
+                            variant: "tonal"
+                            iconName: "refresh"
+                            enabled: Configs.hasUnsavedChanges()
+                            onClicked: if (Configs.common) Configs.common.discardChanges()
+                        }
+                        MdButton {
+                            text: "从磁盘重载"
+                            variant: "outlined"
+                            iconName: "download"
+                            onClicked: {
+                                Configs.reloadAll();
+                                page.refreshGroups();
                             }
                         }
-
-                        ChamferedPanel {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            contentMargin: 16
-                            cut: 10
-
-                            EmptyState {
-                                anchors.fill: parent
-                                visible: page.runnerName.length === 0
-                                indexText: "04"
-                                title: "选择左侧运行器"
-                                description: "运行器配置会被游戏配置中的 runner.name 引用。"
-                            }
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                visible: page.runnerName.length > 0
-                                spacing: 10
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    Text {
-                                        text: page.runnerName
-                                        color: Theme.colors.paper
-                                        font.family: App.monoFontFamily
-                                        font.pixelSize: 18
-                                        font.weight: Font.DemiBold
-                                    }
-
-                                    ArkTag {
-                                        text: Configs.runnerDirectoryIsolated ? "EDITABLE" : "READ ONLY"
-                                        kind: Configs.runnerDirectoryIsolated ? "state" : "warn"
-                                        implicitHeight: 20
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-
-                                    ArkButton {
-                                        text: "重新加载"
-                                        implicitHeight: 36
-                                        ghost: true
-                                        onClicked: {
-                                            if (page.runnerCfg) {
-                                                page.runnerCfg.discardChanges();
-                                                page.refreshRunner();
-                                            }
-                                        }
-                                    }
-
-                                    ArkButton {
-                                        text: "保存"
-                                        implicitHeight: 36
-                                        primary: true
-                                        enabled: Configs.runnerDirectoryIsolated && page.runnerCfg
-                                                 && page.runnerCfg.dirty
-                                        onClicked: page.saveRunner()
-                                    }
-                                }
-
-                                InfoRow {
-                                    Layout.fillWidth: true
-                                    label: "文件"
-                                    value: page.runnerCfg ? page.runnerCfg.filePath : ""
-                                }
-
-                                InfoRow {
-                                    Layout.fillWidth: true
-                                    label: "runner.exe"
-                                    value: Configs.runnerDetails(page.runnerName).exe
-                                           ? Configs.runnerDetails(page.runnerName).exe : "—"
-                                }
-
-                                InfoRow {
-                                    Layout.fillWidth: true
-                                    label: "protonpath"
-                                    value: Configs.runnerDetails(page.runnerName).protonpath
-                                           ? Configs.runnerDetails(page.runnerName).protonpath : "—"
-                                }
-
-                                ValidationList {
-                                    Layout.fillWidth: true
-                                    issues: page.runnerIssues
-                                }
-
-                                CodeEditor {
-                                    id: runnerRawArea
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    readOnly: !Configs.runnerDirectoryIsolated
-                                    text: page.runnerCfg ? page.runnerCfg.text : ""
-                                    placeholderText: "运行器配置"
-
-                                    Connections {
-                                        target: page.runnerCfg
-                                        function onChanged() {
-                                            if (!runnerRawArea.editing) {
-                                                runnerRawArea.text = page.runnerCfg.text;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    ArkButton {
-                                        text: "应用文本"
-                                        implicitHeight: 36
-                                        enabled: Configs.runnerDirectoryIsolated
-                                        onClicked: {
-                                            if (!page.runnerCfg) {
-                                                return;
-                                            }
-                                            const result = page.runnerCfg.applyRawText(runnerRawArea.text);
-                                            page.refreshRunner();
-                                            page.host.showToast(result.ok
-                                                                ? "已应用到内存，保存后写入磁盘"
-                                                                : "无法应用：" + result.error);
-                                        }
-                                    }
-
-                                    MicroLabel {
-                                        label: "RUNNER CONFIG / 原始文本编辑"
-                                        color: Theme.colors.disabled
-                                        microSize: 8
-                                        tracking: 0.8
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-                                }
-                            }
+                        MdButton {
+                            text: "原始编辑器"
+                            variant: "outlined"
+                            iconName: "code"
+                            visible: Settings.advancedMode
+                            enabled: Configs.common !== null
+                            onClicked: rawDialog.openWith(Configs.common ? Configs.common.text : "")
                         }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    MdText {
+                        Layout.fillWidth: true
+                        role: "bodySmall"
+                        tone: "variant"
+                        text: "保存时会在同目录生成 .bak.<时间戳> 备份；删除某个键即回到上游默认行为。"
+                        wrapMode: Text.WordWrap
                     }
                 }
             }
 
-            // ---------------- 路径 ----------------
-            Item {
-                id: pathsTab
+            // 校验
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+                visible: Configs.common !== null
 
-                ScrollView {
+                ColumnLayout {
                     anchors.fill: parent
-                    clip: true
-                    contentWidth: availableWidth
-                    ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                    spacing: Md3.space.sm
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 12
+                    MdSectionHeader {
+                        title: "校验"
+                        caption: "有错误时无法保存"
+                    }
 
-                        SectionHeader {
-                            Layout.fillWidth: true
-                            index: "01"
-                            english: "ISOLATION"
-                            title: "目录与隔离"
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Hyps Hub 使用独立的 XDG 目录。调用 CLI 时会注入 CONFIG_DIR / CACHE_DIR / "
-                                  + "DATA_DIR / TEMP_DIR，因此不会写入 ~/Hyps，也不会与 ~/.config/hypsc、"
-                                  + "~/.local/share/hypsc、~/.cache/hypsc、/tmp/hypsc 混用。"
-                            color: Theme.colors.paper2
-                            font.family: App.uiFontFamily
-                            font.pixelSize: 12
-                            lineHeight: 1.5
-                            wrapMode: Text.WordWrap
-                        }
-
-                        Repeater {
-                            model: App.directories
-
-                            delegate: ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 10
-
-                                    MicroLabel {
-                                        Layout.preferredWidth: 120
-                                        label: modelData.name
-                                        color: Theme.colors.signal
-                                        microSize: 9
-                                        tracking: 1.0
-                                    }
-
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: modelData.path
-                                        color: Theme.colors.paper2
-                                        font.family: App.monoFontFamily
-                                        font.pixelSize: 11
-                                        elide: Text.ElideMiddle
-                                    }
-
-                                    ArkButton {
-                                        text: "打开"
-                                        implicitHeight: 32
-                                        ghost: true
-                                        font.pixelSize: 9
-                                        onClicked: AppControl.openDirectory(modelData.path)
-                                    }
-                                }
-
-                                MicroLabel {
-                                    Layout.leftMargin: 130
-                                    Layout.fillWidth: true
-                                    label: modelData.description
-                                    color: Theme.colors.disabled
-                                    microSize: 8
-                                    tracking: 0.6
-                                }
-
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    height: 1
-                                    color: Theme.colors.rule
-                                    opacity: 0.5
-                                }
-                            }
-                        }
-
-                        Item { Layout.preferredHeight: 8 }
+                    MdValidationList {
+                        Layout.fillWidth: true
+                        issues: Configs.common ? Configs.validateCommon() : []
+                        emptyText: "通用配置没有发现问题"
                     }
                 }
             }
+
+            // 通用配置
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+                visible: Configs.common !== null
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.md
+
+                    MdSectionHeader {
+                        title: "通用配置"
+                        caption: Configs.commonFields.length + " 个字段"
+                    }
+
+                    Repeater {
+                        model: page.fieldGroups
+
+                        delegate: MdExpansionPanel {
+                            Layout.fillWidth: true
+                            title: modelData
+                            subtitle: page.fieldsIn(Configs.commonFields, modelData).length + " 项"
+                            expanded: index < 2
+
+                            Column {
+                                width: parent.width
+                                spacing: Md3.space.md
+
+                                Repeater {
+                                    model: page.fieldsIn(Configs.commonFields, modelData)
+
+                                    delegate: Column {
+                                        width: parent.width
+                                        spacing: Md3.space.md
+
+                                        MdField {
+                                            width: parent.width
+                                            config: Configs.common
+                                            configKey: modelData.key
+                                            title: modelData.title
+                                            description: modelData.description
+                                            hint: modelData.hint
+                                            type: modelData.type
+                                            options: modelData.options ? modelData.options : []
+                                        }
+
+                                        MdDivider {
+                                            width: parent.width
+                                            visible: index < parent.children.length - 2
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 运行器
+            MdCard {
+                Layout.fillWidth: true
+                variant: "outlined"
+                visible: Configs.runnerNames.length > 0
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: Md3.space.md
+
+                    MdSectionHeader {
+                        title: "运行器"
+                        caption: Configs.runnerDirectory
+                    }
+
+                    MdBanner {
+                        Layout.fillWidth: true
+                        visible: Configs.runnerDirectoryIsolated
+                        status: "info"
+                        text: "运行器目录来自组件内部，只读。要自定义运行器，请把配置放到用户配置目录下的 runners/。"
+                    }
+
+                    MdSelect {
+                        Layout.fillWidth: true
+                        label: "选择运行器"
+                        model: Configs.runnerNames
+                        currentValue: page.activeRunner()
+                        placeholder: "未选择"
+                        onActivated: function (value) {
+                            page.currentRunner = value;
+                        }
+                    }
+
+                    MdValidationList {
+                        Layout.fillWidth: true
+                        issues: page.activeRunner().length > 0
+                                ? Configs.validateRunner(page.activeRunner()) : []
+                        emptyText: "该运行器没有发现问题"
+                    }
+
+                    Repeater {
+                        model: page.runnerConfig() ? page.runnerConfig().keys() : []
+
+                        delegate: MdField {
+                            Layout.fillWidth: true
+                            config: page.runnerConfig()
+                            configKey: modelData
+                            title: modelData
+                            type: "text"
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 100000
+                        spacing: Md3.space.sm
+
+                        MdButton {
+                            text: "保存运行器"
+                            variant: "filled"
+                            iconName: "save"
+                            enabled: !Configs.runnerDirectoryIsolated
+                            onClicked: page.saveConfig(page.runnerConfig())
+                        }
+                        MdButton {
+                            text: "重载运行器"
+                            variant: "outlined"
+                            iconName: "refresh"
+                            onClicked: Configs.reloadRunners()
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+                }
+            }
+
+            // 未初始化
+            MdEmptyState {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 320
+                visible: Configs.common === null
+                iconName: "config"
+                title: "还没有配置文件"
+                description: "通用配置文件不存在。初始化会创建一份带注释的默认配置。"
+                actionText: "初始化配置"
+                onActionClicked: Adapter.initializeConfig()
+            }
         }
     }
 
-    RawEditorDialog {
-        id: commonRawDialog
-
-        onApplyRequested: function (text) {
-            const result = Configs.common.applyRawText(text);
-            page.refreshCommon();
-            if (result.ok) {
-                commonRawDialog.markApplied();
-            }
-            page.host.showToast(result.ok
-                                ? "已应用到内存，保存后写入磁盘"
-                                : "无法应用：" + result.error);
-        }
-
-        onSaveRequested: function (text) {
-            const applied = Configs.common.applyRawText(text);
-            if (!applied.ok) {
-                page.host.showToast("无法应用：" + applied.error);
-                return;
-            }
-            if (page.saveCommon()) {
-                commonRawDialog.close();
+    MdRawEditorDialog {
+        id: rawDialog
+        heading: "原始配置"
+        subtitle: Configs.commonConfigPath
+        onApplyText: function (text) { if (Configs.common) Configs.common.applyRawText(text) }
+        onApplyAndSave: function (text) {
+            if (Configs.common) {
+                Configs.common.applyRawText(text);
+                page.saveConfig(Configs.common);
             }
         }
-    }
-
-    RawEditorDialog {
-        id: runnerRawDialog
-        readOnly: !Configs.runnerDirectoryIsolated
-
-        onApplyRequested: function (text) {
-            if (!page.runnerCfg) {
-                return;
-            }
-            const result = page.runnerCfg.applyRawText(text);
-            page.refreshRunner();
-            if (result.ok) {
-                runnerRawDialog.markApplied();
-            }
-            page.host.showToast(result.ok
-                                ? "已应用到内存，保存后写入磁盘"
-                                : "无法应用：" + result.error);
-        }
-
-        onSaveRequested: function (text) {
-            if (!page.runnerCfg) {
-                return;
-            }
-            const applied = page.runnerCfg.applyRawText(text);
-            if (!applied.ok) {
-                page.host.showToast("无法应用：" + applied.error);
-                return;
-            }
-            if (page.saveRunner()) {
-                runnerRawDialog.close();
-            }
-        }
-    }
-
-    ConfirmDialog {
-        id: saveCommonDialog
-        title: "通用配置存在 " + page.commonIssues.length + " 项警告"
-        message: "这些项可能导致启动失败或功能不可用。仍要保存吗？"
-        confirmText: "仍然保存"
-        onAccepted: page.saveCommon()
     }
 }

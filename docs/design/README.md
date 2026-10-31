@@ -1,25 +1,45 @@
-# 设计规范参考
+# 设计系统
 
-本目录保存用户提供的两份 Ark / 明日方舟风格设计规范，作为界面实现与验收依据：
+界面遵循 **Material Design 3（MD3）**，实现位于 `qml/theme/Md3.js`（令牌）与
+`qml/components/Md*.qml`（组件）；C++ 侧的语义色板在 `src/app/thememanager.cpp`。
 
-- `ARK-STYLE-GUIDE.md`：通用设计规范（色彩、字体、切角、组件、动效、验收清单）
-- `视觉设计白皮书.md`：项目视觉系统说明、踩坑记录与来源附录
+## 当前文档
 
-## 使用边界
+- `MD3-SPEC.md`：**唯一契约**。颜色角色、字阶、形状、间距、状态层、动效、组件 API、
+  页面契约、Qt 6.10 限制与自检命令都在这里。
 
-1. 规范中的**设计语言**（近黑墨底、单一青色信号、0 圆角、1px 细线、45° 切角、索引与双纹理）
-   已落地到 `ThemeManager`（C++ 色板）与 `qml/components/`。
-2. 规范明确不包含鹰角专有资产。本项目同样**不引入**任何官方 logo、立绘、图标表或字体文件；
-   界面图形为原创几何标记、自生成噪点/警戒线纹理与自绘线性图标。
-3. 字体仅使用系统本地回退（Noto Sans CJK、DejaVu Sans Condensed、JetBrains Maple Mono 等），
-   不随包分发字体。
-4. 规范中各数值（如侧轨 64–96px）在实现中直接采用：导航轨 84px、顶栏 56px、按钮 44px、
-   内容页边距 24px。
+## 结构
 
-## 实现差异说明
+| 层 | 位置 | 说明 |
+| --- | --- | --- |
+| 颜色 | `src/app/thememanager.cpp` | 基线紫配色，浅/深两套完整语义角色（含自定义 `success` / `warning`） |
+| 令牌 | `qml/theme/Md3.js` | `shape` / `space` / `type` / `state` / `motion` / `size` / `elevation` |
+| 组件 | `qml/components/Md*.qml` | 46 个组件，API 冻结，页面只通过它们拼装界面 |
+| 页面 | `qml/pages/*.qml` | 7 个主页面 + 引导页，统一 `property var host` 契约 |
+| 外壳 | `qml/Main.qml` | 导航轨 + 顶部应用栏 + StackLayout + Snackbar/确认对话框 |
 
-- 桌面应用使用 Qt Quick 而非 CSS：切角由 `QtQuick.Shapes` 绘制，噪点/警戒线为生成的 PNG 平铺纹理，
-  网格与暗角由 Canvas 绘制。
-- 规范针对 Web 的 IntersectionObserver/兜底动画、favicon 等条目不适用；对应地保证了 QML 加载失败时
-  进程退出码非 0，并在构建后运行 QML 冒烟测试。
-- 浅色模式为规范未定义部分，沿用同一几何语言并提高信号色对比度。
+## 关键约定
+
+1. 只使用 MD3 语义色（`Theme.colors.primary`、`surfaceContainerHigh`、`onSurfaceVariant`…），
+   不在 QML 里写死色值。
+2. 字号只用 15 级字阶（`MdText { role: "bodyMedium" }`），不写 `font.pixelSize`。
+3. 圆角只用 `Md3.shape.*`，间距只用 `Md3.space.*`，动效只用 `Md3.motion.*`。
+4. 交互态用状态层（悬停 8%、按下 10%、拖拽 16%、禁用 38%），不改文字颜色。
+5. 软件渲染（`QT_QUICK_BACKEND=software`）下不使用 shader 效果；阴影用偏移半透明矩形近似。
+6. 图标统一走 `MdIcon`（Canvas 自绘 24×24 线性图标），不引入图标字体。
+7. 品牌标识统一走 `MdBrandMark`（`assets/hyps-hub{,-light}.svg`，随主题切换）；
+   窗口图标与桌面入口用自带底色的 `assets/hyps-hub-tile.svg`。
+
+## 历史归档
+
+`ARK-STYLE-GUIDE.md` 与 `视觉设计白皮书.md` 是早期 Ark 风格界面的规范与踩坑记录，
+仅作历史参考，**不再作为实现依据**；对应组件（`ArkButton`、`ChamferedPanel`、`GridBackdrop` 等）
+与纹理资源已从仓库移除。
+
+## 自检
+
+```bash
+scripts/qml-check.sh qml/components/MdButton.qml     # 单文件：qmllint + 离屏加载 + 像素摘要
+scripts/qml-check.sh qml/pages/HomePage.qml
+scripts/ui-fixture.sh /tmp/md3                        # 隔离夹具，用于整窗截图
+```

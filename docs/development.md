@@ -15,7 +15,7 @@ src/
   app/                         GUI 应用层
     apppaths.*                 XDG 解析、CLI 隔离环境、平台信息
     appsettings.*              GUI JSON 配置（损坏自动备份并回退）
-    thememanager.*             Ark 色板、深浅色、跟随系统
+    thememanager.*             MD3 语义色板（浅/深两套）、跟随系统
     logmodel.*                 结构化日志模型 + 过滤代理
     task.*                     任务状态
     taskmanager.*              子进程任务、实时日志、历史、取消
@@ -33,7 +33,7 @@ src/
     runtimemanager.*           克隆、校验、Git 信息、安全更新
   diagnostics/
     diagnostics.*              脱敏诊断包导出
-qml/                           Ark 设计语言界面（见 docs/design/）
+qml/                           MD3 界面：theme/ 令牌、components/ 组件、pages/ 页面（见 docs/design/）
 tests/                         Qt Test 与假 Hyps 组件/假 git
 packaging/                    PKGBUILD、desktop
 scripts/                      构建、运行、本地安装/卸载
@@ -96,26 +96,36 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 
 ## 5. 调试
 
+- `scripts/dev-run.sh`：**开发模式**，`--qml-source` 从磁盘加载 QML，改界面不用重新编译。
+  监视 `qml/` 自动重启（600ms 去抖），监视 `src/`、`CMakeLists.txt` 变动时先增量编译再重启；
+  编译或加载失败时保留旧进程，错误写 `/tmp/hyps-dev.log`。
+  - `scripts/dev-run.sh` 前台运行（Ctrl-C 退出）、`--bg` 后台、`--stop` 停止、`--once` 只启动一次。
 - `--smoke-test`：加载 QML 后 1.5s 退出，用于检查 QML 错误。
 - `--screenshot <path>`：加载后保存窗口截图（需要 `QT_QPA_PLATFORM=offscreen` 或真实会话）。
 - `--preview-dialog <objectName>`：加载后自动打开指定 QML 弹窗，用于截图/调试；例如
   `--preview-dialog addGameDialog --screenshot add-game.png`。
 - `QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software`：无显示环境下的 QML 验证。
+- `scripts/ui-audit.sh`：全页几何审计（`COLLAPSED`/`OVERFLOW`/`CLIPPED`/`NAN`）
+  + 逐页运行时警告门禁，两种窗口尺寸各跑一遍；合入前必须 `PASS`。
 - 日志：`~/.local/share/hyps-hub/logs/`；任务日志在 `logs/tasks/`。
 - Hyps 组件日志：`logs/runtime.log`；更新记录：`~/.local/state/hyps-hub/update-history.jsonl`。
+- ⚠️ 进程内 `console.log/warn/error` **不会**出现在 stderr（只有引擎级警告会），
+  写 QML 探针时用 `qml/dev/LayoutAudit.qml` 里那套 `emitOne()` 通道。
 
 ## 6. 界面设计
 
-界面遵循用户提供的 Ark 设计规范（见 `docs/design/`）：
+界面遵循 **Material Design 3**，契约在 `docs/design/MD3-SPEC.md`（唯一实现依据）：
 
-- 近黑墨底 `#080a0b`、纸阶文字、单一青色信号 `#18d1ff`；酸性绿只表状态。
-- 0 圆角、1px 细线、左上/右下 45° 切角、单条左侧强边、取景框角标。
-- NN 索引、等宽微标签、大写字母、`tabular` 数字。
-- 噪点 + 蓝图网格 + 45° 警戒线双纹理。
-- 交互目标 >= 40px（按钮默认 44px）；禁止无限旋转 loading / 回弹缓动。
+- 颜色只用 MD3 语义角色（`Theme.colors.primary`、`surfaceContainerHigh`、`onSurfaceVariant`…），
+  浅/深两套完整色板由 `src/app/thememanager.cpp` 提供，QML 里不写死色值。
+- 排版只用 15 级字阶（`MdText { role: "bodyMedium" }`），不写 `font.pixelSize`。
+- 圆角用 `Md3.shape.*`、间距用 `Md3.space.*`、动效用 `Md3.motion.*`；
+  交互态用状态层（hover 8% / pressed 10% / disabled 38%），不改文字颜色。
+- 组件一律用 `qml/components/Md*.qml`（44 个，API 冻结）；页面只做拼装。
+- 软件渲染（`QT_QUICK_BACKEND=software`）下不用 shader 效果，阴影用半透明矩形近似。
+- 全宽组件根上必须写 `Layout.fillWidth: true`，否则在 `ColumnLayout` 里宽度会塌成 0（见 §7.7）。
 
-**不要从官网或游戏资源中引入鹰角专有美术资产。** 项目是 GPL 开源分发，图形均为原创几何标记、
-自生成纹理与自绘线性图标。需要官方视觉氛围时，应通过用户自选本地壁纸等不分发资产的方式实现。
+图标是 `MdIcon` 的 Canvas 自绘 24×24 线性图标集，不引入图标字体或第三方美术资产。
 
 ## 7. 发布前检查
 

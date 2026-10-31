@@ -2,8 +2,27 @@
 
 > 环境：Arch Linux（rolling）、Qt 6.12.0、GCC 16.2.1、Ninja、Wayland/niri 会话（UI 验证使用
 > `QT_QPA_PLATFORM=offscreen` + 软件渲染后端）。
-> 当前版本：**0.3.0**（上游 Hyps 基线 `a2ac842`，见 [upstream-sync-2026-10-27.md](upstream-sync-2026-10-27.md)）。
-> 交付提交：见 `git log -1`；本文记录的是实际执行结果，0.3.0 新增项在构建验证后补填。
+> 当前版本：**0.4.0**（上游 Hyps 基线 `a2ac842`，见 [upstream-sync-2026-10-27.md](upstream-sync-2026-10-27.md)）。
+> 交付提交：见 `git log -1`；本文记录的是实际执行结果，新增项在构建验证后补填。
+> 完整变更记录见 [CHANGELOG.md](../CHANGELOG.md)。
+
+## 0.4.0 · MD3 界面重写（2026-10-31 实测）
+
+界面按 MD3 全量重写，新增自动化界面自检。上游契约未变，配置与任务历史无破坏性变更。
+
+| 项目 | 结果 |
+| --- | --- |
+| 构建 | `cmake -B build -G Ninja && cmake --build build` 通过，Qt 6.12.0 + Ninja |
+| 版本号 | `hyps-hub --version` 输出 `hyps-hub 0.4.0` |
+| 单元测试 | `ctest` **11/11 通过**（`tst_network_e2e` 需外网，默认禁用） |
+| 界面几何审计 | `scripts/ui-audit.sh` **PASS**：8 页面 × 2 尺寸（1440×900 / 1040×720），`collapsed=0 overflow=0 clipped=0 nan=0` |
+| 运行时警告 | 7 个页面逐页离屏渲染，stderr **零警告** |
+| QML 门禁 | `scripts/qml-check.sh` 覆盖全部页面与 46 个组件，qmllint + 离屏加载 + 零 stderr 全通过 |
+| 截图 | `docs/screenshots/` 10 张，1440×900，由 `scripts/ui-fixture.sh` 隔离夹具渲染 |
+
+审计口径：`collapsed` = 显式高度被压到 0 的可见控件；`overflow` = 子项超出父容器；
+`clipped` = 文本被裁切；`nan` = 坐标或尺寸出现 NaN/Inf。
+
 
 ## 1. 工作区与受保护目录
 

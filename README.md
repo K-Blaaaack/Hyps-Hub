@@ -24,8 +24,8 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
   白名单诊断命令、脱敏诊断包导出。
 - **上游同步**：跟随上游 Hyps 的配置契约变化（0.3.0 基线 `a2ac842`）。上游移除的功能（如 hosts 断网）
   同步下线，只对残留键告警；弃用键（如 `gi.fps_unlock.prog`）给出迁移提示而不改动用户配置。
-- **Ark 设计语言界面**：近黑墨底、单一青色信号、0 圆角、1px 细线、45° 切角、NN 索引与双纹理；
-  跟随系统深浅色，支持手动切换。
+- **Material Design 3 界面**：完整的 MD3 基线配色（浅/深两套语义色）、15 级字阶、形状/间距/状态层令牌；
+  导航轨 + 顶部应用栏 + 卡片式内容区，跟随系统深浅色并支持手动切换。
 
 ## 界面与使用教程
 
@@ -108,7 +108,7 @@ Hyps Hub 是 [Hyps](https://github.com/MoYingJi/Hyps) CLI 的原生 Linux 桌面
 
 ![设置](docs/screenshots/settings.png)
 
-- 主题跟随系统，也可固定浅色/深色；保持 Ark 令牌与零圆角几何。
+- 主题跟随系统，也可固定浅色/深色；两套主题都使用同一套 MD3 语义色与几何令牌。
 - 桌面通知（D-Bus，服务不可用时静默降级）、高级模式、窗口状态。
 - 组件信息与快捷入口；隐私说明与退出行为。
 
@@ -162,8 +162,8 @@ ctest --test-dir build --output-on-failure
 
 ```bash
 # 在仓库根目录生成源码包（PKGBUILD 使用本地源码包）
-git archive --prefix=hyps-hub-0.3.0/ -o hyps-hub-0.3.0.tar.gz HEAD
-mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.3.0.tar.gz /tmp/hyps-hub-pkg/
+git archive --prefix=hyps-hub-0.4.0/ -o hyps-hub-0.4.0.tar.gz HEAD
+mkdir -p /tmp/hyps-hub-pkg && cp packaging/PKGBUILD hyps-hub-0.4.0.tar.gz /tmp/hyps-hub-pkg/
 cd /tmp/hyps-hub-pkg && makepkg -f
 ```
 
@@ -171,7 +171,7 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 
 ## 上游同步
 
-当前版本 **0.3.0**，对应上游 Hyps 提交 `a2ac842`（基线 `1b94dc8`）。
+当前版本 **0.4.0**，对应上游 Hyps 提交 `a2ac842`（基线 `1b94dc8`）。
 
 | 上游变化 | Hyps Hub 处理 |
 | --- | --- |
@@ -209,15 +209,23 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 
 ## 开发
 
+改界面不用重新编译：
+
+```bash
+./scripts/dev-run.sh          # 从磁盘加载 QML，改完自动重启（--bg 后台 / --stop 停止）
+./scripts/ui-audit.sh         # 全页几何审计 + 运行时警告门禁（合入前必须 PASS）
+```
+
 架构、适配层契约、测试与设计规范见：
 
+- [CHANGELOG.md](CHANGELOG.md) — 每个版本的完整变更记录
 - [docs/research.md](docs/research.md) — 上游调研、能力映射、技术选型
 - [docs/architecture.md](docs/architecture.md) — 分层、目录、状态机、适配层
 - [docs/development.md](docs/development.md) — 构建、测试、调试
 - [docs/verification.md](docs/verification.md) — 构建、测试、打包与验收记录
 - [docs/upstream-sync-2026-10-27.md](docs/upstream-sync-2026-10-27.md) — 0.3.0 上游同步（`1b94dc8` → `a2ac842`）
 - [docs/troubleshooting.md](docs/troubleshooting.md) — 故障排查
-- [docs/design/](docs/design/) — Ark 设计语言参考（仅设计语言，不含鹰角专有资产）
+- [docs/design/](docs/design/) — MD3 设计系统契约（`MD3-SPEC.md`）与历史视觉参考归档
 
 ## 已知限制
 
@@ -243,14 +251,11 @@ GPL-3.0-only。上游 Hyps 亦为 GPL-3.0-only，但本项目不包含其源码�
 本项目的 CLI、初始化、配置格式与游戏启动逻辑均来自该项目。
 
 - **上游项目**：[MoYingJi/Hyps](https://github.com/MoYingJi/Hyps)（GPL-3.0-only）。Hyps Hub 不包含其源码。
-- **设计语言参考**：[Brandon030722/ark-ui-skill](https://github.com/Brandon030722/ark-ui-skill)、
-  [《明日方舟》UI/UX 分析](https://gameinstitute.qq.com/index.php/knowledge/100122)（腾讯游戏学院 / AJ）、
-  [ignoredone.space 字体库](https://www.ignoredone.space/index.php/fontlab/)、
-  [《「舟味」从何而来》PDF](https://janniewang.net/wp-content/uploads/2023/09/UIUX-analysis-for-Arknights.pdf)。
+- **设计规范**：[Material Design 3](https://m3.material.io/)（Google，配色角色、字阶、形状、状态层、动效）。
 - **框架与工具**：Qt 6 / Qt Quick Controls 2、CMake、Ninja、GitHub Actions、Arch Linux `makepkg`。
-- **原创内容**：应用 logo、自绘导航图标、生成的噪点/警戒线纹理、界面与文档；字体仅使用系统本地回退。
+- **原创内容**：应用 logo、`MdIcon` 自绘线性图标集、界面与文档；字体仅使用系统本地回退。
 
-界面只采用设计语言，不包含鹰角网络的商标、logo、立绘、图标表或字体文件。
-本项目与鹰角网络、明日方舟无隶属或背书关系。
+界面遵循 MD3 规范自行实现，不包含 Material Symbols 字体文件或其他第三方图标资产。
+本项目与 Google 无隶属或背书关系。
 
 完整来源、许可与致谢见 [docs/credits.md](docs/credits.md)。

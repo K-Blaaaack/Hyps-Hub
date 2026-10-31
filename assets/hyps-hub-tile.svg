@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Hyps Hub · 方形容器版（窗口图标 / 桌面入口） -->
+  <rect width="256" height="256" rx="60" fill="#211f26"/>
+  <g fill="#d0bcff">
+    <rect x="58" y="54" width="34" height="148" rx="17"/>
+    <rect x="164" y="54" width="34" height="148" rx="17"/>
+    <rect x="58" y="111" width="140" height="34" rx="17"/>
+  </g>
+</svg>
