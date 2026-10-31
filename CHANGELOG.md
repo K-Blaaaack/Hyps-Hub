@@ -5,6 +5,18 @@
 
 ---
 
+## [未发布]
+
+### 变更
+
+- **Release 正文改由 CHANGELOG 生成**：`.github/workflows/release.yml` 的 publish 作业先 checkout，
+  用 `scripts/release-notes.sh <版本>` 抽出本版本段落作为正文，再补上完整变更记录与安装说明的链接。
+  此前用 `generate_release_notes: true`，正文只有一行 `Full Changelog` 对比链接，对使用者没有信息量。
+- 缺段落时发布流程直接失败（`CHANGELOG.md` 里没有对应 `## [版本]` 标题），避免发出正文空白的 release。
+- `docs/development.md` §7 补发版要求与本地预览正文的方法。
+
+---
+
 ## [0.4.0] — 2026-10-31
 
 界面按 **Material Design 3** 全量重写。0.3.0 的 Ark 风格（近黑底 + 青色信号 + 45° 切角）
@@ -119,7 +131,7 @@
 - `scripts/ui-audit.sh` — **PASS**：8 页面 × 2 尺寸，`collapsed=0 overflow=0 clipped=0 nan=0`；7 个页面渲染零警告
 - `scripts/qml-check.sh` — 全部页面与组件通过（qmllint + 离屏加载 + 零 stderr）
 - `ctest` — **11/11 通过**（`tst_network_e2e` 因需要外网默认禁用）
-- 构建：Qt 6.10 + CMake + Ninja，软件渲染后端（`QT_QUICK_BACKEND=software`）下全部界面正常
+- 构建：Qt 6.12.0 + CMake + Ninja，软件渲染后端（`QT_QUICK_BACKEND=software`）下全部界面正常
 
 ---
 

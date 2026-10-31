@@ -140,6 +140,22 @@ HYPS_HUB_RUN_NETWORK_TESTS=1 TMPDIR=$PWD/build/tests/tmp ./build/tests/tst_netwo
 
 - 没有改动 `~/Hyps`；
 - `git status` 干净；
-- 版本号在 `CMakeLists.txt` 中更新；
+- 版本号在 `CMakeLists.txt`、`packaging/PKGBUILD` 中同步更新（Release 工作流会校验
+  tag 名与 `pkgver` 一致，不一致直接失败）；
+- **`CHANGELOG.md` 里有该版本的段落**（标题格式 `## [0.4.0] — YYYY-MM-DD`）。Release 正文
+  直接取自这一段，缺段落时发布流程会失败，不会发出正文空白的 release；
 - 文档中的截图与功能一致；
 - 已知限制没有变化（否则更新 README/架构文档）。
+
+发版前可以先本地预览 release 正文：
+
+```bash
+./scripts/release-notes.sh 0.4.0
+```
+
+发版就是打 tag 并推送，剩下的由 `.github/workflows/release.yml` 完成：
+
+```bash
+git tag -a v0.4.0 -m "Hyps Hub v0.4.0"
+git push origin v0.4.0
+```

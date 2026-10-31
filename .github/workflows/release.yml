@@ -77,15 +77,41 @@ jobs:
     permissions:
       contents: write
     steps:
+      # 需要 CHANGELOG.md 来生成正文
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Download assets
         uses: actions/download-artifact@v8
         with:
           name: release-assets
           path: dist
 
+      # Release 正文取自 CHANGELOG.md 里本版本的段落，而不是 GitHub 自动生成的
+      # commit 列表——后者对使用者没有信息量。缺段落就让这一步失败。
+      - name: Build release notes from CHANGELOG
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF_NAME#v}"
+          bash scripts/release-notes.sh "$ver" > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "CHANGELOG.md 缺少 ${ver} 的段落，先补记录再发版。" >&2
+            exit 1
+          fi
+          {
+            echo
+            echo "---"
+            echo
+            echo "**完整变更记录**：[CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md)"
+            echo "· **安装说明**：[docs/install.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/install.md)"
+          } >> release-notes.md
+          echo "正文 $(wc -l < release-notes.md) 行："
+          head -n 8 release-notes.md
+
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
           files: dist/*
-          generate_release_notes: true
+          body_path: release-notes.md
+          generate_release_notes: false
           fail_on_unmatched_files: true

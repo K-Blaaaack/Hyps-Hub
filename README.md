@@ -228,6 +228,7 @@ cd /tmp/hyps-hub-pkg && makepkg -f
 ```bash
 ./scripts/dev-run.sh          # 从磁盘加载 QML，改完自动重启（--bg 后台 / --stop 停止）
 ./scripts/ui-audit.sh         # 全页几何审计 + 运行时警告门禁（合入前必须 PASS）
+./scripts/release-notes.sh    # 从 CHANGELOG.md 抽出某版本段落（Release 正文就用它）
 ```
 
 架构、适配层契约、测试与设计规范见：
