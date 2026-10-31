@@ -229,6 +229,7 @@ install(FILES assets/hyps-hub-tile.svg
 
 install(FILES
     README.md
+    CHANGELOG.md
     LICENSE.md
     docs/install.md
     docs/troubleshooting.md
@@ -244,6 +245,12 @@ install(FILES
 install(FILES docs/design/README.md
     DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/hyps-hub"
     RENAME design.md
+)
+
+# 设计契约正文：design.md 只是索引，真正的规范在 MD3-SPEC.md
+install(FILES docs/design/MD3-SPEC.md
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/hyps-hub"
+    RENAME md3-spec.md
 )
 
 install(FILES licenses/GPL-3.0-only.txt
